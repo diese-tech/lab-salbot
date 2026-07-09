@@ -25,6 +25,9 @@ export type AuditActionType =
   | 'stat_rejected'
   | 'stat_corrected'
   | 'ign_updated'
+  | 'discord_identity_linked'
+  | 'division_role_mapping_updated'
+  | 'division_role_synced'
   | 'admin_override';
 
 export type StatRecordStatus = 'pending' | 'approved' | 'rejected' | 'corrected' | 'superseded';

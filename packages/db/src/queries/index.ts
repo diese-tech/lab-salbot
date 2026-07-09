@@ -5,3 +5,5 @@ export * from './audit-logs';
 export * from './admin-users';
 export * from './stat-records';
 export * from './god-draft';
+export * from './divisions';
+export * from './division-role-mappings';

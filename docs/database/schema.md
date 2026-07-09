@@ -152,6 +152,18 @@ note              text
 created_at        timestamptz NOT NULL DEFAULT now()
 ```
 
+### `division_role_mappings`
+
+Discord role mappings for league divisions. Admins manage these through `/division-role-config`; role IDs are not secrets, but writes still go through the bot service role and are audited.
+
+```sql
+division_id           text PRIMARY KEY REFERENCES divisions(id)
+discord_role_id       text NOT NULL
+updated_by_discord_id text NOT NULL
+created_at            timestamptz NOT NULL DEFAULT now()
+updated_at            timestamptz NOT NULL DEFAULT now()
+```
+
 ### `pending_stat_records`
 
 ForgeLens OCR output (Phase 4). Admin reviews before writing to `player_stats`.
@@ -233,3 +245,4 @@ See [`mutation-patterns.md`](mutation-patterns.md) for the full contract.
 3. `audit_logs` is INSERT-only. No UPDATE, no DELETE.
 4. `pending_stat_records` are reviewed → then a new `player_stats` row is written.
 5. `player_stats` is written only by the approval handler after admin approval.
+6. Division role mapping and player identity sync mutations are bot-admin actions and write directly to `audit_logs`.

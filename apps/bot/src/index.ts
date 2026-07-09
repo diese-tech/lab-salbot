@@ -2,6 +2,7 @@ import { Client, GatewayIntentBits } from 'discord.js';
 import type { ChatInputCommandInteraction } from 'discord.js';
 import { isAdminUser } from '@salbot/db';
 import { db } from './lib/db';
+import { validateRequiredEnv } from './lib/config';
 import { subscribeToGodDraftRecaps } from './lib/god-draft-recap';
 import { handleProofUpload, activeProofThreads } from './lib/proof-thread';
 
@@ -11,6 +12,8 @@ import * as reschedule from './commands/reschedule';
 import * as requestAdminReview from './commands/request-admin-review';
 import * as updateIgn from './commands/update-ign';
 import * as rules from './commands/rules';
+import * as divisionRoleConfig from './commands/division-role-config';
+import * as divisionSync from './commands/division-sync';
 
 // Approval handlers
 import {
@@ -35,11 +38,16 @@ const commands = new Map<string, CommandModule>([
   [requestAdminReview.data.name, requestAdminReview],
   [updateIgn.data.name, updateIgn],
   [rules.data.name, rules],
+  [divisionRoleConfig.data.name, divisionRoleConfig],
+  [divisionSync.data.name, divisionSync],
 ]);
+
+validateRequiredEnv();
 
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
   ],
@@ -48,6 +56,8 @@ const client = new Client({
 client.once('ready', () => {
   console.log(`[bot] Ready as ${client.user?.tag}`);
   console.log(`[bot] Loaded commands: ${[...commands.keys()].join(', ')}`);
+  console.log('[bot] Required intents: Guilds, GuildMembers, GuildMessages, MessageContent');
+  console.log('[bot] Required permissions: Manage Roles for /division-sync role updates');
   console.log(`[bot] Admin review channel: ${process.env.CHANNEL_ADMIN_REVIEW ?? 'NOT SET'}`);
   subscribeToGodDraftRecaps(client, db);
 });

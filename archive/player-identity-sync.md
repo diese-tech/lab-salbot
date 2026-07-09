@@ -1,5 +1,9 @@
 # Player Identity Sync
 
+Archived after implementation of the Discord-admin player identity and division role sync workflow.
+
+Original planning document moved from `docs/features/player-identity-sync.md`.
+
 ## Objective
 Implement an admin workflow that imports a roster CSV, resolves Discord usernames to Discord user IDs, stores those IDs in Supabase, synchronizes division roles, and produces an audit summary.
 
@@ -30,9 +34,3 @@ Implement an admin workflow that imports a roster CSV, resolves Discord username
 - Support discord_id CSVs.
 - Website upload workflow.
 - Conflict resolution UI.
-
-## Completion
-When this implementation is complete and verified in production:
-1. Move this planning document and any superseded implementation notes into `/archive`.
-2. Create `/archive` if it does not already exist.
-3. Retain only user-facing documentation in active docs.

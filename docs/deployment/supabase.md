@@ -26,6 +26,8 @@ supabase db push --db-url $PRODUCTION_DB_URL
 
 Migrations are in `database/migrations/`. They run in filename order. Do not rename migration files after they have been applied to any environment.
 
+The division sync workflow requires the `division_role_mappings` migration. This table stores Discord role IDs selected by admins from `/division-role-config`.
+
 ---
 
 ## Generating TypeScript Types
@@ -61,6 +63,7 @@ evidence/{season}/{division_slug}/week-{week}/{match_id}/{filename}
 Row-Level Security must be configured for all tables. Key policies:
 
 - `audit_logs`: INSERT only via service role; no UPDATE, no DELETE (see ADR-006)
+- `division_role_mappings`: READ/WRITE via service role only; admins manage rows through Discord bot commands
 - `matches`: READ for authenticated users; WRITE via service role only
 - `pending_actions`: READ for authenticated users; WRITE via service role only
 - `player_stats`: READ for public; WRITE via service role only

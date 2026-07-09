@@ -67,6 +67,67 @@ When ForgeLens extracts stats but cannot match the in-game name to a player:
 
 ---
 
+## Configuring Division Roles
+
+Division roles are managed from Discord so admins do not need deployment or database access.
+
+1. Run `/division-role-config set`
+2. Enter the division id, such as `solar`, `lunar`, or `gaia`
+3. Select the Discord role for that division
+4. The bot stores the mapping in Supabase and writes an `audit_logs` entry
+
+To review configured mappings, run:
+
+```txt
+/division-role-config list
+```
+
+The bot must have the Discord Manage Roles permission, and its highest role must be above every division role it needs to assign or remove.
+
+---
+
+## Previewing Division Sync
+
+Use `/division-sync preview` to validate a roster CSV before any mutation happens.
+
+CSV format:
+
+```csv
+division,discord_username
+solar,diese
+lunar,player2
+gaia,player3
+```
+
+The `discord_username` column must contain the actual Discord account username. The bot resolves that username in the server, extracts the Discord user ID, and matches the player by `players.discord_username` in Supabase.
+
+Preview mode does not:
+
+- Update `players.discord_id`
+- Change Discord roles
+- Write audit logs
+
+The preview response reports matched rows, conflicts, missing users, missing players, and missing division role mappings. If there are actionable rows, the bot returns a short-lived confirmation token.
+
+---
+
+## Applying Division Sync
+
+After previewing, run `/division-sync apply token:[token]`.
+
+Apply mode:
+
+1. Links `players.discord_id` only when it is empty
+2. Refuses to overwrite a different existing `players.discord_id`
+3. Removes old known division roles
+4. Adds the configured role for the player's CSV division
+5. Writes `audit_logs` entries for identity links and role updates
+6. Returns a final summary of updates, skips, conflicts, and failures
+
+If the token is expired or belongs to a different admin, run preview again.
+
+---
+
 ## Manually Entering Stats
 
 When a screenshot is unreadable or ForgeLens has failed:
