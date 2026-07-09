@@ -11,11 +11,13 @@ Slash commands are the official intake method. Message scanning is a safety net 
 Why this matters:
 
 - Commands produce structured, validated input with known fields
-- Commands create deterministic pending_actions
+- Captain approval commands create deterministic pending_actions
 - Commands guarantee a proof thread and admin review card are created
 - Scanned messages are ambiguous and cannot guarantee completeness
 
 Captains are expected to use commands. If a captain posts a score in chat without using the command, the bot may optionally detect it and prompt them to use the command, but the scan result itself is not treated as an official submission.
+
+Admin-only operational commands, such as division role setup and division sync, do not use `pending_actions` because the admin is already taking the action directly. They still validate `admin_users` and write `audit_logs` for every mutation.
 
 ---
 
@@ -158,6 +160,83 @@ Catch-all escalation for anything not covered by structured commands.
 **1. Admin review card** — posted in `#admin-review`
 
 Includes full description and optional match link. No public receipt (may be sensitive).
+
+---
+
+## `/division-role-config`
+
+Admin-only setup command for division role mappings.
+
+### Subcommands
+
+| Subcommand | Purpose |
+|------------|---------|
+| `set` | Maps a division id to a Discord role selected from the role picker |
+| `list` | Shows configured division role mappings |
+
+### Behavior
+
+`/division-role-config set` stores the selected Discord role ID in `division_role_mappings`. Role IDs are not secrets; they are stored in Supabase so admins can manage mappings without deployment access.
+
+Every mapping change writes an `audit_logs` entry with:
+
+- `action_type = 'division_role_mapping_updated'`
+- `entity_type = 'division_role_mapping'`
+- `entity_id = division_id`
+- `actor_discord_id = admin Discord ID`
+
+The command requires the invoking Discord user to exist in `admin_users`.
+
+---
+
+## `/division-sync`
+
+Admin-only player identity and division role sync workflow.
+
+### Preview Input
+
+`/division-sync preview` accepts a CSV attachment:
+
+```csv
+division,discord_username
+solar,diese
+lunar,player2
+gaia,player3
+```
+
+`discord_username` means the actual Discord account username. The bot resolves that username in the guild, extracts the Discord user ID, and matches the Supabase player by `players.discord_username`.
+
+### Preview Output
+
+Preview mode reports:
+
+- matched rows
+- duplicate CSV usernames
+- usernames missing from the Discord server
+- players missing from Supabase
+- conflicting existing `players.discord_id` values
+- missing division role mappings
+
+Preview mode does not update Supabase, change Discord roles, or write audit logs.
+
+If there are actionable rows, the bot returns a short-lived confirmation token.
+
+### Apply Behavior
+
+`/division-sync apply token:[token]` applies a recent preview for the same admin.
+
+Apply mode:
+
+1. Links `players.discord_id` only when it is empty.
+2. Refuses to overwrite a different existing `players.discord_id`.
+3. Removes old known division roles.
+4. Adds the configured role for the CSV division.
+5. Writes audit logs for identity links and role updates.
+6. Returns a final summary of updates, skips, conflicts, and failures.
+
+Confirmation tokens are in-memory and expire after 10 minutes. If the bot restarts or the token expires, run preview again.
+
+The bot must have the Discord Manage Roles permission and its highest role must be above every division role it manages.
 
 ---
 

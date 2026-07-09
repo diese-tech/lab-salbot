@@ -1,47 +1,36 @@
 # Documentation Index
 
----
-
 ## Start Here
 
-- [`onboarding/getting-started.md`](onboarding/getting-started.md) — new contributor orientation
-- [`onboarding/local-development.md`](onboarding/local-development.md) — local setup
-- [`ROADMAP.md`](ROADMAP.md) — phased implementation plan
-- [`operational-philosophy.md`](operational-philosophy.md) — founding principles
-
----
+- [`onboarding/getting-started.md`](onboarding/getting-started.md) - new contributor orientation
+- [`onboarding/local-development.md`](onboarding/local-development.md) - local setup
+- [`ROADMAP.md`](ROADMAP.md) - phased implementation plan
+- [`operational-philosophy.md`](operational-philosophy.md) - founding principles
 
 ## Architecture
 
-- [`architecture/overview.md`](architecture/overview.md) — system design, component responsibilities
-- [`architecture/platform-split.md`](architecture/platform-split.md) — boundary definitions
-- [`architecture/data-flow.md`](architecture/data-flow.md) — per-workflow data diagrams
-
----
+- [`architecture/overview.md`](architecture/overview.md) - system design and component responsibilities
+- [`architecture/platform-split.md`](architecture/platform-split.md) - boundary definitions
+- [`architecture/data-flow.md`](architecture/data-flow.md) - per-workflow data diagrams
+- [`architecture/operations.md`](architecture/operations.md) - reusable bot operations engine
 
 ## Database
 
-- [`database/schema.md`](database/schema.md) — table definitions, relationships
-- [`database/mutation-patterns.md`](database/mutation-patterns.md) — how state changes happen
-- [`database/audit-philosophy.md`](database/audit-philosophy.md) — audit log design and rules
-
----
+- [`database/schema.md`](database/schema.md) - table definitions and relationships
+- [`database/mutation-patterns.md`](database/mutation-patterns.md) - how state changes happen
+- [`database/audit-philosophy.md`](database/audit-philosophy.md) - audit log design and rules
 
 ## Workflows
 
-- [`workflows/discord-workflows.md`](workflows/discord-workflows.md) — all captain and admin commands
-- [`workflows/proof-threads.md`](workflows/proof-threads.md) — proof thread lifecycle
-- [`workflows/approval-pipeline.md`](workflows/approval-pipeline.md) — shared approval infrastructure
-
----
+- [`workflows/discord-workflows.md`](workflows/discord-workflows.md) - all captain and admin commands
+- [`workflows/proof-threads.md`](workflows/proof-threads.md) - proof thread lifecycle
+- [`workflows/approval-pipeline.md`](workflows/approval-pipeline.md) - shared approval infrastructure
 
 ## OCR / ForgeLens
 
-- [`ocr/forgelens-integration.md`](ocr/forgelens-integration.md) — ingestion, pipeline, output
-- [`ocr/confidence-scoring.md`](ocr/confidence-scoring.md) — scoring model and routing
-- [`ocr/stat-approval-lifecycle.md`](ocr/stat-approval-lifecycle.md) — admin review of stat records
-
----
+- [`ocr/forgelens-integration.md`](ocr/forgelens-integration.md) - ingestion, pipeline, output
+- [`ocr/confidence-scoring.md`](ocr/confidence-scoring.md) - scoring model and routing
+- [`ocr/stat-approval-lifecycle.md`](ocr/stat-approval-lifecycle.md) - admin review of stat records
 
 ## Architecture Decision Records
 
@@ -56,16 +45,13 @@
 
 New ADRs: copy [`adrs/template.md`](adrs/template.md).
 
----
-
 ## Runbooks
 
-- [`runbooks/incident-handling.md`](runbooks/incident-handling.md) — live incident response
-- [`runbooks/admin-operations.md`](runbooks/admin-operations.md) — common admin tasks
-
----
+- [`runbooks/incident-handling.md`](runbooks/incident-handling.md) - live incident response
+- [`runbooks/admin-operations.md`](runbooks/admin-operations.md) - common admin tasks
 
 ## Deployment
 
-- [`deployment/vercel.md`](deployment/vercel.md) — web panel deployment
-- [`deployment/supabase.md`](deployment/supabase.md) — database and storage
+- [`deployment/discord.md`](deployment/discord.md) - Discord application, intents, permissions, and command registration
+- [`deployment/vercel.md`](deployment/vercel.md) - web panel deployment
+- [`deployment/supabase.md`](deployment/supabase.md) - database and storage

@@ -49,6 +49,8 @@ The bot handles:
 - Admin review card posting
 - Approval button interaction handling
 - Screenshot upload tracking
+- Admin-only division role configuration
+- Admin-only player identity and division role sync
 
 The bot does **not** store state. It reads from Supabase and writes back to Supabase. It uses Discord as a display surface.
 
@@ -118,11 +120,35 @@ Captain: /reschedule
 → Audit log records mutation
 ```
 
+### Division Sync Flow
+
+```
+Admin: /division-role-config set
+-> Bot stores division_role_mappings in Supabase
+-> Bot writes audit log entry
+
+Admin: /division-sync preview
+-> Bot parses roster CSV
+-> Bot resolves Discord usernames to Discord IDs
+-> Bot matches Supabase players by players.discord_username
+-> Bot reports missing users, missing players, conflicts, and missing role mappings
+-> Bot returns a short-lived confirmation token
+
+Admin: /division-sync apply
+-> Bot links empty players.discord_id values
+-> Bot refuses conflicting discord_id overwrites
+-> Bot removes old known division roles
+-> Bot adds the configured division role
+-> Audit log records identity and role mutations
+```
+
 ---
 
 ## Approval Pipeline
 
 All approvals use the same infrastructure. There is one approval pipeline, not one per workflow type.
+
+Admin-only setup and identity maintenance operations do not use the approval pipeline. They validate `admin_users` directly and write `audit_logs`.
 
 Admin review cards support four actions:
 

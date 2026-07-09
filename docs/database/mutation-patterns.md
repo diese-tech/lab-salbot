@@ -13,6 +13,8 @@ This document defines the contract for how state changes happen. Every engineer 
 
 This is enforced by convention and should eventually be enforced by Supabase RLS or a server-side function layer.
 
+Admin-only operational mutations, such as linking `players.discord_id`, updating `division_role_mappings`, or synchronizing Discord roles, do not create `pending_actions`. They must still validate the admin actor and write `audit_logs` with `actor_discord_id`, old values, and new values.
+
 ---
 
 ## Mutation Sequence
@@ -95,6 +97,26 @@ The website admin panel supports direct overrides (e.g., correcting a score afte
 3. Reference the admin's Discord ID as `actor_discord_id`
 
 An override without an audit log entry is a bug.
+
+---
+
+## Direct Admin Operation Pattern
+
+Some admin-only operations are setup or identity-maintenance tasks rather than captain-submitted approvals. These include:
+
+- linking an empty `players.discord_id`
+- updating `division_role_mappings`
+- synchronizing Discord division roles
+
+These operations must:
+
+1. Validate the actor through `admin_users`
+2. Preview conflicts before applying when the operation is bulk or destructive
+3. Refuse to overwrite conflicting identity data automatically
+4. Write to `audit_logs` with `pending_action_id = null`
+5. Include `actor_discord_id`, `old_value_json`, and `new_value_json`
+
+An audited direct admin operation is valid even without a `pending_action_id`.
 
 ---
 

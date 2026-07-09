@@ -111,7 +111,7 @@ These tables are created by `database/migrations/20250101000000_initial_schema.s
 
 ### `pending_actions`
 
-The approval queue. Every captain command creates one before any mutation.
+The approval queue. Every captain approval command creates one before any match/stat mutation.
 
 ```sql
 id                          text PRIMARY KEY DEFAULT gen_random_uuid()::text

@@ -12,7 +12,7 @@ A mistake here is not just a bug. It may affect real people.
 
 ### 1. Every mutation writes to audit_logs
 
-If your code changes `matches`, `player_stats`, or `standings`, it must write to `audit_logs` with:
+If your code changes `matches`, `player_stats`, `standings`, player identity links, or division role mappings, it must write to `audit_logs` with:
 - `action_type`
 - `entity_type` and `entity_id`
 - `actor_discord_id`
@@ -35,6 +35,8 @@ captain command
 
 There is no shortcut path.
 
+Admin-only operational setup and identity maintenance is the exception. Commands such as `/division-role-config` and `/division-sync` may mutate `division_role_mappings`, `players.discord_id`, and Discord roles directly after validating `admin_users`. They still must write `audit_logs`.
+
 ### 3. OCR never writes to player_stats
 
 ForgeLens creates `pending_stat_records` only.
@@ -52,6 +54,8 @@ Corrections are new rows. History is preserved.
 Never store authoritative state in bot memory, Discord message content, or the ForgeLens service.
 
 All reads for match data, player data, and pending actions come from Supabase.
+
+Short-lived confirmation tokens for preview/apply flows may live in bot memory, but they are not authoritative state. If the bot restarts, the admin must run preview again.
 
 ---
 
@@ -124,6 +128,7 @@ These are operationally critical paths. Flag them for explicit review, not just 
 | Component | Can write to | Cannot write to |
 |-----------|-------------|----------------|
 | Discord bot | `pending_actions`, `audit_logs`, `matches` (via approval handler) | `player_stats` directly |
+| Discord bot admin operations | `audit_logs`, `division_role_mappings`, empty `players.discord_id`, Discord roles | conflicting `players.discord_id` overwrites |
 | ForgeLens | `pending_stat_records` | `player_stats`, `matches`, `pending_actions` |
 | Website | Any table via service role | (none, but all mutations must write audit_log) |
 | Supabase RLS | Enforces boundaries | N/A |
@@ -134,6 +139,7 @@ These are operationally critical paths. Flag them for explicit review, not just 
 
 - [ ] Does the approval path write to `audit_logs`?
 - [ ] Does the command create a `pending_action` before any mutation?
+- [ ] If it is an admin-only setup or identity operation, does it validate `admin_users` and write `audit_logs`?
 - [ ] Does the bot use the dropdown pattern for match selection (not free text)?
 - [ ] Is error handling scoped to real failure modes (not defensive theatre)?
 - [ ] Is the feature within the current phase scope?

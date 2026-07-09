@@ -50,11 +50,11 @@ salbot/
 
 ### pending_actions
 
-Every captain command creates a `pending_action`. No match mutation happens without one. If you're adding a new workflow, it must produce a `pending_action`. See [`docs/workflows/approval-pipeline.md`](../workflows/approval-pipeline.md).
+Every captain approval command creates a `pending_action`. No match mutation happens without one. Admin-only setup and identity commands, such as division role mapping and division sync, are audited direct operations instead. See [`docs/workflows/approval-pipeline.md`](../workflows/approval-pipeline.md) and [`docs/database/mutation-patterns.md`](../database/mutation-patterns.md).
 
 ### audit_logs
 
-Every mutation writes an `audit_log` entry. This is not optional. If your code changes a match, player stat, or standing and does not write to `audit_logs`, it is a bug. See [`docs/database/audit-philosophy.md`](../database/audit-philosophy.md).
+Every mutation writes an `audit_log` entry. This is not optional. If your code changes a match, player stat, standing, identity link, or division role mapping and does not write to `audit_logs`, it is a bug. See [`docs/database/audit-philosophy.md`](../database/audit-philosophy.md).
 
 ### match selection dropdowns
 
@@ -66,7 +66,8 @@ Captains do not type team names. The bot resolves the captain's identity, finds 
 
 - [ ] Does my change touch the approval pipeline? → Read the pipeline ADRs.
 - [ ] Does my change mutate a match, player_stat, or standing? → Does it write to `audit_logs`?
-- [ ] Does my change add a new command? → Does it produce a `pending_action`?
+- [ ] Does my change add a new captain approval command? → Does it produce a `pending_action`?
+- [ ] Does my change add an admin-only setup or identity command? → Does it validate `admin_users` and write `audit_logs`?
 - [ ] Does my change add a new pending_action type? → Does it have an approval handler?
 - [ ] Have I added tests for the new approval path?
 

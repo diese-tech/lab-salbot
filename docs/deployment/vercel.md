@@ -6,7 +6,7 @@ The `apps/web` Next.js admin panel deploys to Vercel.
 
 ## Setup
 
-1. Connect the `diese-tech/salbot` repository to Vercel
+1. Connect the `diese-tech/lab-salbot` repository to Vercel
 2. Set root directory to `apps/web` (or use Vercel's monorepo detection)
 3. Configure environment variables (see below)
 

@@ -8,7 +8,7 @@ This is a planning tool for deciding what to build next, in what order, and why.
 
 ## Current State
 
-**Phase 0 complete.**
+**Phase 0 complete. Operations foundation partially implemented.**
 
 The repository scaffold is in place:
 - monorepo structure
@@ -16,9 +16,12 @@ The repository scaffold is in place:
 - architecture decision records
 - initial Supabase schema and migrations
 - typed query helpers
-- command stubs ready for implementation
+- command stubs and several implemented bot commands
+- Operations Engine under `apps/bot/src/lib/operations`
+- `/division-role-config`
+- `/division-sync` preview/apply
 
-No production features are live yet.
+The captain match approval pipeline remains the main MVP focus. Admin-only identity and division role operations are implemented as audited direct operations.
 
 ---
 

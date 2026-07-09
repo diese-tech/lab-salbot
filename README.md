@@ -45,7 +45,7 @@ This platform exists to solve three operational problems:
 | Component | Role |
 |-----------|------|
 | **Supabase** | Authoritative state. Owns all entities, relationships, lifecycle, identifiers. |
-| **Discord Bot** | Workflow intake. Captain commands, public receipts, admin review cards, proof threads. |
+| **Discord Bot** | Workflow intake. Captain commands, admin operations, public receipts, admin review cards, proof threads. |
 | **Website** | Operational control center. Complex edits, audit history, stat review, corrections. |
 | **ForgeLens** | OCR processor. Extracts stats from screenshots, generates confidence scores, creates pending stat records for review. |
 
@@ -87,6 +87,14 @@ Captain selects scheduled match → requests new date/time → admin review work
 ### `/request-admin-review`
 
 Catch-all escalation. Creates an admin review card for any issue not covered by structured commands.
+
+### `/division-role-config`
+
+Admin-only setup command. Admins map each SAL division to a Discord role from inside Discord. Mappings are stored in Supabase and audited.
+
+### `/division-sync`
+
+Admin-only identity and role synchronization workflow. Admins upload a roster CSV, preview proposed Discord identity links and role changes, then apply the sync with a short-lived confirmation token.
 
 ---
 
@@ -189,6 +197,11 @@ salbot/
 ## Documentation
 
 Full documentation lives in [`docs/`](docs/). Start with:
+
+Current operations docs:
+
+- [`docs/architecture/operations.md`](docs/architecture/operations.md) - reusable bot operations engine
+- [`docs/deployment/discord.md`](docs/deployment/discord.md) - Discord setup and command registration
 
 - [`docs/architecture/overview.md`](docs/architecture/overview.md) — system design
 - [`docs/onboarding/getting-started.md`](docs/onboarding/getting-started.md) — contributor setup

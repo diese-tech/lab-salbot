@@ -32,13 +32,13 @@ The division sync workflow requires the `division_role_mappings` migration. This
 
 ## Generating TypeScript Types
 
-After any schema change:
+After any schema change, regenerate types if this checkout is configured to commit generated Supabase types:
 
 ```bash
 pnpm --filter @salbot/db generate
 ```
 
-Commit the updated `packages/db/src/types/database.types.ts`.
+This checkout currently uses typed query helpers in `packages/db/src/queries/`; it does not currently commit a generated `packages/db/src/types/database.types.ts` file. If generated types are added later, commit them with the schema change.
 
 ---
 
@@ -68,7 +68,7 @@ Row-Level Security must be configured for all tables. Key policies:
 - `pending_actions`: READ for authenticated users; WRITE via service role only
 - `player_stats`: READ for public; WRITE via service role only
 
-RLS policy files live in `infra/supabase/`.
+There is not currently a committed `infra/supabase/` policy directory in this checkout. If SQL policy files are added later, keep them with the migration or introduce a documented policy directory in the same change.
 
 ---
 

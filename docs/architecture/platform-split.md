@@ -27,10 +27,14 @@ For any new feature, ask:
 - Updating embed status on pending_action state changes
 - Tracking screenshot upload count in proof threads
 - Notifying admins of pending review queue changes
+- Managing division role mappings through admin-only commands
+- Linking empty `players.discord_id` values through audited admin operations
+- Synchronizing Discord division roles from Supabase mappings
 
 ## Discord Bot — NOT Allowed
 
 - Directly mutating `matches`, `standings`, or `player_stats` without a `pending_actions` entry
+- Overwriting conflicting `players.discord_id` values automatically
 - Storing any entity state internally (in-memory or otherwise) as a substitute for Supabase
 - Acting as a fallback database for anything
 - Making final approval decisions autonomously
@@ -95,3 +99,7 @@ A: Yes. The website approval actions go through the same `pending_actions` mutat
 **Q: What if Discord goes down?**
 
 A: All state is in Supabase. The website remains fully operational. The website admin panel becomes the fallback approval surface.
+
+**Q: Why can `/division-sync` mutate without a `pending_action`?**
+
+A: It is an admin-only setup and identity maintenance workflow, not a captain-submitted approval. It validates the admin, previews conflicts, refuses destructive identity overwrites, and writes `audit_logs` for every mutation.

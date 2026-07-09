@@ -4,7 +4,7 @@ Phased plan from scaffold to production-ready platform.
 
 ---
 
-## Phase 0: Foundation (Current)
+## Phase 0: Foundation
 
 **Goal:** Repository scaffold, documentation, schema design. No production logic.
 
@@ -19,6 +19,15 @@ Deliverables:
 - [ ] Local development verified end-to-end
 - [ ] Initial Supabase migrations written
 - [ ] TypeScript types generated
+
+Additional operations foundation now implemented:
+
+- [x] Operations Engine under `apps/bot/src/lib/operations`
+- [x] `/division-role-config`
+- [x] `/division-sync` preview/apply
+- [x] `division_role_mappings` migration
+
+The captain match approval pipeline remains the main MVP focus.
 
 ---
 

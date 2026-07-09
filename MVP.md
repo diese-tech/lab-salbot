@@ -138,3 +138,16 @@ At the end of a match week, the audit log is a complete, attributable record of 
 The MVP is operational readiness for one season of SAL league management.
 
 Everything else is Phase 2+.
+
+---
+
+## Implemented Operations Foundation
+
+The repo also includes admin-only operations infrastructure that supports league setup and roster synchronization:
+
+- Operations Engine helpers under `apps/bot/src/lib/operations`
+- `/division-role-config` for Discord-managed division role mappings
+- `/division-sync` preview/apply for player Discord ID linking and division role sync
+- `division_role_mappings` Supabase migration
+
+These workflows are audited direct admin operations. They do not replace the MVP match approval loop above.

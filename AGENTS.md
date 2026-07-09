@@ -1,49 +1,43 @@
-# AGENTS.md — SAL Operations Platform
+# AGENTS.md - SAL Operations Platform
 
 This file defines the rules for AI-assisted implementation on this project.
 
 Read this before implementing anything.
 
----
-
 ## What This Project Is
 
 A competition operations platform for the SAL league.
 
-It is NOT a Discord bot project.
-
-The Discord bot is one component of four. The system's job is:
+It is not only a Discord bot project. The Discord bot is one component of four. The system's job is:
 
 - structured match result intake
 - admin approval pipelines
 - compliance-grade evidence collection
 - OCR-assisted stat extraction
 - audit-logged state management
-
----
+- admin identity and role operations
 
 ## What Supabase Owns
 
 Supabase is the single source of truth.
 
 Supabase owns:
+
 - match records and lifecycle
 - schedules and standings
 - player/team relationships
+- Discord identity links
+- division role mappings
 - pending actions
 - audit logs
 - evidence references
 - stat records
 
-Discord is a display and intake surface only.
-
-Do not treat Discord message history as a data store.
-
----
+Discord is a display and intake surface only. Do not treat Discord message history as a data store.
 
 ## Architecture Rules
 
-### No direct mutations without pending_actions
+### No Direct Match/Stat Mutations Without pending_actions
 
 Every match result, reschedule, or stat change must:
 
@@ -52,30 +46,31 @@ Every match result, reschedule, or stat change must:
 3. Execute the mutation on approval
 4. Write to `audit_logs`
 
-There is no shortcut path.
+There is no shortcut path for match/stat approval workflows.
 
-### No silent mutations
+Admin-only operational setup and identity maintenance is the exception. Commands such as `/division-role-config` and `/division-sync` may mutate `division_role_mappings`, `players.discord_id`, and Discord roles directly after validating `admin_users`. Those mutations must still write `audit_logs` and must not overwrite conflicting identity data automatically.
 
-Every state change to `matches`, `player_stats`, or `standings` must write an `audit_logs` entry with:
+### No Silent Mutations
+
+Every state change to `matches`, `player_stats`, `standings`, player identity links, or division role mappings must write an `audit_logs` entry with:
+
 - `actor_discord_id`
 - `old_value_json`
 - `new_value_json`
 
-### audit_logs are immutable
+### audit_logs Are Immutable
 
-Never UPDATE or DELETE `audit_logs` rows.
+Never update or delete `audit_logs` rows.
 
 Corrections are new rows, not edits.
 
-### OCR never auto-approves
+### OCR Never Auto-Approves
 
 ForgeLens creates `pending_stat_records`.
 
-It does NOT write to `player_stats` directly.
+It does not write to `player_stats` directly.
 
 Every stat record requires admin approval.
-
----
 
 ## Command Rules
 
@@ -83,66 +78,62 @@ Slash commands are the official workflow.
 
 Message scanning is a fallback only.
 
-Scanning must NEVER autonomously create a `pending_action` without human confirmation.
-
----
+Scanning must never autonomously create a `pending_action` without human confirmation.
 
 ## Match Selection
 
 Captains do not type team names.
 
 Bot resolves:
-1. Discord user ID → player record
-2. player record → team
-3. team → eligible matches from Supabase dropdown
 
-Always use the dropdown pattern. Never ask captains to type team names.
+1. Discord user ID to player record
+2. Player record to team
+3. Team to eligible matches from Supabase dropdown
 
----
+Always use the dropdown pattern for captain match workflows. Never ask captains to type team names.
 
 ## Implementation Constraints
 
-Do NOT:
+Do not:
+
 - Add features beyond what the current phase requires
 - Introduce in-memory state as a substitute for Supabase reads
 - Skip `audit_logs` on any mutation to match-related tables
+- Skip `audit_logs` on any player identity or division role mapping mutation
 - Allow ForgeLens to write directly to `player_stats`
-- Create duplicate approval systems — use `pending_actions`
+- Create duplicate approval systems; use `pending_actions`
 - Add error handling for scenarios that cannot happen
 - Write clever abstractions without clear justification
 
-DO:
+Do:
+
 - Write to `audit_logs` on every state mutation
 - Route all approvals through `pending_actions`
+- Use audited direct admin operations for setup and identity maintenance that does not require pending approval
 - Use Supabase dropdowns for match selection
-- Keep command handlers thin — business logic belongs in `packages/shared` or service functions
+- Keep command handlers thin; business logic belongs in `packages/shared` or service functions
 - Protect against double-approval race conditions on pending actions
-
----
 
 ## Current Phase
 
-**Phase 0 — Scaffold complete.**
+Core bot and operations foundation is in progress.
 
-Next: **Phase 1 — `/report-result` + approval pipeline end-to-end.**
+Completed foundation includes the Operations Engine, `/division-role-config`, and `/division-sync` preview/apply. The captain approval pipeline remains an active implementation area.
 
 See `ROADMAP.md` for phase definitions.
 
 See `MVP.md` for scope boundaries.
 
----
-
 ## Before Implementing Any New Feature
 
 1. Is it in the current phase scope? If not, stop.
 2. Does it mutate match state? If yes, does it go through `pending_actions`?
-3. Does it write to `audit_logs`?
-4. Does it add an approval handler if it adds a new `pending_action` type?
-5. Is the captain workflow using the dropdown pattern?
+3. Is it an admin-only setup or identity operation? If yes, does it validate `admin_users` and write `audit_logs`?
+4. Does it write to `audit_logs`?
+5. Does it add an approval handler if it adds a new `pending_action` type?
+6. Is the captain workflow using the dropdown pattern?
 
 If any answer is wrong, fix it before merging.
-
----
 
 ## Key Files
 
@@ -150,13 +141,13 @@ If any answer is wrong, fix it before merging.
 |------|---------|
 | `docs/architecture/overview.md` | System design |
 | `docs/architecture/platform-split.md` | Component boundaries |
+| `docs/architecture/operations.md` | Operations Engine |
 | `docs/database/schema.md` | Table definitions |
 | `docs/database/mutation-patterns.md` | How state changes |
 | `docs/workflows/approval-pipeline.md` | Approval infrastructure |
+| `docs/workflows/discord-workflows.md` | Discord-facing workflows |
 | `docs/adrs/` | Why the system looks this way |
 | `docs/AI_WORKFLOW_GUARDRAILS.md` | Implementation safety rules |
-
----
 
 ## Queries Go Through packages/db
 

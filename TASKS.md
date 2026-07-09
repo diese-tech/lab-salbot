@@ -16,6 +16,8 @@ Not fake productivity.
 
 See `ROADMAP.md` Phase 1 for full scope.
 
+Completed operations foundation now includes the Operations Engine, `/division-role-config`, and `/division-sync` preview/apply. Current active work remains the captain approval pipeline.
+
 ### Active Tasks
 
 - [ ] Captain identity resolution middleware (`getCaptainByDiscordId` → team)
@@ -48,6 +50,10 @@ See `ROADMAP.md` Phase 1 for full scope.
 - [x] `packages/db` query helpers
 - [x] `packages/shared` types and score parser
 - [x] CI (typecheck, lint, test)
+- [x] Operations Engine
+- [x] `/division-role-config`
+- [x] `/division-sync` preview/apply
+- [x] `division_role_mappings` migration
 
 ## MVP — Phase 1
 
@@ -69,6 +75,7 @@ See `ROADMAP.md` Phase 1 for full scope.
 - [ ] Bot reconnect and session recovery on restart
 - [ ] Error boundary on button interactions (prevent double-approval crash)
 - [ ] Channel config validation on startup
+- [ ] Live Discord/Supabase smoke test for `/division-role-config` and `/division-sync`
 
 ## Future Work
 

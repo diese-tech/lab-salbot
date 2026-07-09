@@ -24,8 +24,8 @@ npm install -g supabase
 ## 1. Clone and Install
 
 ```bash
-git clone https://github.com/diese-tech/salbot
-cd salbot
+git clone https://github.com/diese-tech/lab-salbot
+cd lab-salbot
 pnpm install
 ```
 
@@ -75,10 +75,10 @@ supabase db push
 
 This applies all migrations from `database/migrations/` to your local database.
 
-Seed development data:
+Seed development data by applying the SQL seed file to your local database. There is not currently a root `db:seed` script.
 
 ```bash
-pnpm run db:seed
+psql "$DB_URL" -f database/seeds/001_development.sql
 ```
 
 ---
@@ -89,7 +89,7 @@ pnpm run db:seed
 pnpm --filter @salbot/db generate
 ```
 
-This regenerates `packages/db/src/types/database.types.ts` from your local schema.
+If generated Supabase types are introduced, this regenerates them from your local schema. This checkout currently relies on typed query helpers rather than a committed generated types file.
 
 ---
 
@@ -104,6 +104,8 @@ Before starting, deploy commands to your test guild:
 ```bash
 pnpm --filter @salbot/bot deploy:commands
 ```
+
+Discord setup also requires the Server Members intent and Manage Roles permission. See [`../deployment/discord.md`](../deployment/discord.md).
 
 ---
 
@@ -133,7 +135,7 @@ pnpm --filter @salbot/forgelens dev
 
 ```bash
 supabase db reset
-pnpm run db:seed
+psql "$DB_URL" -f database/seeds/001_development.sql
 ```
 
 ### Add a new migration
@@ -142,7 +144,7 @@ pnpm run db:seed
 supabase migration new your_migration_name
 ```
 
-Edit the generated file in `supabase/migrations/`. Then:
+Edit the generated file in `database/migrations/`. Then:
 
 ```bash
 supabase db push
