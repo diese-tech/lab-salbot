@@ -47,11 +47,16 @@ Only use this if a score was approved incorrectly.
 
 1. Navigate to the website's Admin → Matches, open the match, and correct the score
    and status. The site logs the change to `admin_audit_log` (`save_match`).
-2. Note that editing a match on the website does not update the bot-owned
+2. Editing a match on the website does not update the bot-owned
    `matches.winner_org_id` / `matches.score` columns set by the original approval —
-   if the winner changed, flag it so those columns can be corrected in Supabase.
-3. Recalculate standings from Admin → Standings.
-4. The original approved action remains in the bot's `audit_logs` — this is correct;
+   if the winner changed, correct those columns in Supabase as well.
+3. Write the required `audit_logs` entry for the override (see the
+   [Admin Override Pattern](../database/mutation-patterns.md)): `action_type =
+   'admin_override'`, `actor_discord_id` = the admin's Discord ID, old/new values,
+   and a `note` explaining the reason. An override without an `audit_logs` entry is
+   a bug — `admin_audit_log` alone does not satisfy the contract.
+4. Recalculate standings from Admin → Standings.
+5. The original approved action remains in the bot's `audit_logs` — this is correct;
    corrections create new records rather than rewriting history.
 
 ---

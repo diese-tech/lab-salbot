@@ -223,8 +223,11 @@ UNIQUE (match_id, player_id, game_number)
 ```
 
 After each approval the bot recomputes the affected player's `players.stats` JSONB
-aggregate from the full `player_stats` history. The website's player pages render
-**only** that `players.stats` aggregate — this pipeline is the sole thing that feeds it.
+aggregate from the full `player_stats` history. The website consumes both layers:
+headline numbers on player pages come from the `players.stats` aggregate (fed only
+by this pipeline), and the public player / team / gods pages also query
+`player_stats` directly (via the site's `stats-data` helpers, under an anon
+public-read policy). Schema changes here are public-site-facing.
 
 ### Website stat tables (`match_reports`, `player_match_stats`)
 
