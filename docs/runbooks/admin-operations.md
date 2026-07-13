@@ -6,20 +6,19 @@ Common admin tasks and how to perform them correctly.
 
 ## Approving a Match Result
 
-**Via Discord:**
+Approvals are Discord-only. The website has no pending-actions review queue —
+`pending_actions` is read and written exclusively by the bot.
+
 1. Locate the pending review card in `#admin-review`
 2. Verify the match details (week, teams, score) match expectation
 3. Check proof thread link — verify screenshot count is reasonable
 4. Press **Approve**
 5. Bot updates public receipt to ✅ and disables review card buttons
 
-**Via Website:**
-1. Navigate to Admin → Review Queue
-2. Filter by type: `match_result`
-3. Open the pending action
-4. Review match details, proof thread link, screenshot count
-5. Click Approve
-6. System executes same mutation as Discord approval
+**Standings follow-up:** approval marks the match completed and records scores, but it
+does **not** update the website's standings table. After approving results, go to the
+website's Admin → Standings page and recalculate on demand (or standings will refresh
+the next time an admin submits a match report on the site).
 
 ---
 
@@ -46,12 +45,19 @@ Common admin tasks and how to perform them correctly.
 
 Only use this if a score was approved incorrectly.
 
-1. Navigate to Admin → Matches → [Match ID]
-2. Click "Admin Override"
-3. Enter corrected score and winner
-4. Enter a reason (required — this is a compliance record)
-5. System writes `audit_log { action_type: 'admin_override', note: [reason] }`
-6. Original approved action remains in audit log — this is correct
+1. Navigate to the website's Admin → Matches, open the match, and correct the score
+   and status. The site logs the change to `admin_audit_log` (`save_match`).
+2. Editing a match on the website does not update the bot-owned
+   `matches.winner_org_id` / `matches.score` columns set by the original approval —
+   if the winner changed, correct those columns in Supabase as well.
+3. Write the required `audit_logs` entry for the override (see the
+   [Admin Override Pattern](../database/mutation-patterns.md)): `action_type =
+   'admin_override'`, `actor_discord_id` = the admin's Discord ID, old/new values,
+   and a `note` explaining the reason. An override without an `audit_logs` entry is
+   a bug — `admin_audit_log` alone does not satisfy the contract.
+4. Recalculate standings from Admin → Standings.
+5. The original approved action remains in the bot's `audit_logs` — this is correct;
+   corrections create new records rather than rewriting history.
 
 ---
 

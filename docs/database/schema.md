@@ -80,6 +80,7 @@ home_score      integer
 away_score      integer
 stream_url      text
 vod_url         text
+season_id       text REFERENCES seasons(id)
 archived_at     timestamptz
 deletion_scheduled_at timestamptz
 -- SALbot-added columns (see migration):
@@ -90,6 +91,18 @@ proof_thread_url    text
 screenshot_count    integer NOT NULL DEFAULT 0
 screenshot_expected integer
 ```
+
+Two writers complete matches, with different column coverage:
+
+- **SALbot approval** (`completeMatch`) sets `status`, `winner_org_id`, `home_score`,
+  `away_score`, and `score`.
+- **Website admin match report** sets `status`, `home_score`, and `away_score` only —
+  `winner_org_id` and `score` stay NULL for site-reported matches, so bot code must not
+  assume they are populated on every completed match.
+
+Neither path updates `standings`. Standings are owned by the website and recalculated
+only from Admin → Standings (or the site's match-report submit flow) — see the
+[admin operations runbook](../runbooks/admin-operations.md).
 
 ### `admin_users`
 
@@ -195,16 +208,35 @@ id                      text PRIMARY KEY DEFAULT gen_random_uuid()::text
 match_id                text NOT NULL REFERENCES matches(id)
 player_id               text NOT NULL REFERENCES players(id)
 pending_stat_record_id  text REFERENCES pending_stat_records(id)
+game_number             integer NOT NULL DEFAULT 1
 kills                   integer
 deaths                  integer
 assists                 integer
 damage_dealt            integer
+damage_mitigated        integer
 healing_done            integer
 god_played              text
 role                    text
+won                     boolean
 created_at              timestamptz NOT NULL DEFAULT now()
-UNIQUE (match_id, player_id)
+UNIQUE (match_id, player_id, game_number)
 ```
+
+After each approval the bot recomputes the affected player's `players.stats` JSONB
+aggregate from the full `player_stats` history. The website consumes both layers:
+headline numbers on player pages come from the `players.stats` aggregate (fed only
+by this pipeline), and the public player / team / gods pages also query
+`player_stats` directly (via the site's `stats-data` helpers, under an anon
+public-read policy). Schema changes here are public-site-facing.
+
+### Website stat tables (`match_reports`, `player_match_stats`)
+
+The website's admin match-report flow writes to two tables the bot never touches:
+`match_reports` (report lifecycle) and `player_match_stats` (per-game stat lines,
+replaced atomically via the site's `replace_match_report_stats` RPC). These are a
+**parallel pipeline** to SALbot's `pending_stat_records` → `player_stats`: rows in
+`player_match_stats` do not update `players.stats` and are not displayed on player
+pages today. Do not treat the two stat stores as interchangeable.
 
 ---
 
