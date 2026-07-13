@@ -5,12 +5,18 @@ const RESULT_ENV: Record<string, string> = {
   solar: 'CHANNEL_RESULTS_SOLAR',
   lunar: 'CHANNEL_RESULTS_LUNAR',
   terra: 'CHANNEL_RESULTS_TERRA',
+  // Transitional alias: existing matches created before the sal-site divisions
+  // table migration (gaia -> terra) still carry division_id = 'gaia'. Remove
+  // once that migration is confirmed live in production.
+  gaia: 'CHANNEL_RESULTS_GAIA',
 };
 
 const RESCHEDULE_ENV: Record<string, string> = {
   solar: 'CHANNEL_RESCHEDULES_SOLAR',
   lunar: 'CHANNEL_RESCHEDULES_LUNAR',
   terra: 'CHANNEL_RESCHEDULES_TERRA',
+  // Transitional alias — see RESULT_ENV comment above.
+  gaia: 'CHANNEL_RESCHEDULES_GAIA',
 };
 
 export function getAdminReviewChannelId(): string {
