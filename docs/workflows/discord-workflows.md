@@ -201,7 +201,7 @@ Admin-only player identity and division role sync workflow.
 division,discord_username
 solar,diese
 lunar,player2
-gaia,player3
+terra,player3
 ```
 
 `discord_username` means the actual Discord account username. The bot resolves that username in the guild, extracts the Discord user ID, and matches the Supabase player by `players.discord_username`.

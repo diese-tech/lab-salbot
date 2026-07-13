@@ -18,7 +18,7 @@ export const data = {
         {
           type: 3, // STRING
           name: 'division',
-          description: 'Division id, such as solar, lunar, or gaia.',
+          description: 'Division id, such as solar, lunar, or terra.',
           required: true,
         },
         {

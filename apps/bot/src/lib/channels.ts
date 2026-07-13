@@ -4,13 +4,13 @@
 const RESULT_ENV: Record<string, string> = {
   solar: 'CHANNEL_RESULTS_SOLAR',
   lunar: 'CHANNEL_RESULTS_LUNAR',
-  gaia: 'CHANNEL_RESULTS_GAIA',
+  terra: 'CHANNEL_RESULTS_TERRA',
 };
 
 const RESCHEDULE_ENV: Record<string, string> = {
   solar: 'CHANNEL_RESCHEDULES_SOLAR',
   lunar: 'CHANNEL_RESCHEDULES_LUNAR',
-  gaia: 'CHANNEL_RESCHEDULES_GAIA',
+  terra: 'CHANNEL_RESCHEDULES_TERRA',
 };
 
 export function getAdminReviewChannelId(): string {
