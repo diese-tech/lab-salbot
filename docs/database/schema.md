@@ -13,7 +13,7 @@ These tables were created by the sal-draft-league migrations. SALbot reads from 
 ### `divisions`
 
 ```sql
-id            text PRIMARY KEY  -- 'solar' | 'lunar' | 'gaia'
+id            text PRIMARY KEY  -- 'solar' | 'lunar' | 'terra'
 name          text NOT NULL
 description   text NOT NULL
 tier          integer NOT NULL

@@ -72,7 +72,7 @@ When ForgeLens extracts stats but cannot match the in-game name to a player:
 Division roles are managed from Discord so admins do not need deployment or database access.
 
 1. Run `/division-role-config set`
-2. Enter the division id, such as `solar`, `lunar`, or `gaia`
+2. Enter the division id, such as `solar`, `lunar`, or `terra`
 3. Select the Discord role for that division
 4. The bot stores the mapping in Supabase and writes an `audit_logs` entry
 
@@ -96,7 +96,7 @@ CSV format:
 division,discord_username
 solar,diese
 lunar,player2
-gaia,player3
+terra,player3
 ```
 
 The `discord_username` column must contain the actual Discord account username. The bot resolves that username in the server, extracts the Discord user ID, and matches the player by `players.discord_username` in Supabase.
