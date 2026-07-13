@@ -26,7 +26,7 @@ supabase db push --db-url $PRODUCTION_DB_URL
 
 Migrations are in `database/migrations/`. They run in filename order. Do not rename migration files after they have been applied to any environment.
 
-The division sync workflow requires the `division_role_mappings` migration. This table stores Discord role IDs selected by admins from `/division-role-config`.
+The division sync workflow requires the `division_role_mappings` migration. This table stores Discord role IDs selected by admins from `/division-role-config`. (Applied to the shared production project on 2026-07-13 — it had been missing there, which silently broke `/division-role-config` and the role-sync half of `/division-sync`.)
 
 ---
 
