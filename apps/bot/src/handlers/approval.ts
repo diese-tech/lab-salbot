@@ -25,6 +25,7 @@ import {
   applyNeedsInfoStatus,
 } from '../lib/embeds';
 import { removeActiveProofThread } from '../lib/proof-thread';
+import { toUserMessage } from '../lib/errors';
 
 // ── Approve button ────────────────────────────────────────────────────────────────────
 
@@ -65,7 +66,7 @@ export async function handleApproveButton(interaction: ButtonInteraction, pendin
     await interaction.editReply('✅ Approved.');
   } catch (err) {
     console.error('[approval] approve error:', err);
-    await interaction.editReply('An error occurred during approval. Check logs.');
+    await interaction.editReply(toUserMessage(err));
   }
 }
 
@@ -185,7 +186,7 @@ export async function handleApproveStatButton(interaction: ButtonInteraction, st
       return;
     }
     console.error('[approval] approve stat error:', err);
-    await interaction.editReply('An error occurred during stat approval. Check logs.');
+    await interaction.editReply(toUserMessage(err));
     return;
   }
 
@@ -227,7 +228,7 @@ export async function handleRejectStatModal(interaction: ModalSubmitInteraction,
     await rejectPendingStatRecord(db, statRecordId, interaction.user.id, reason);
   } catch (err) {
     console.error('[approval] reject stat error:', err);
-    await interaction.editReply('An error occurred. Check logs.');
+    await interaction.editReply(toUserMessage(err));
     return;
   }
 
@@ -283,7 +284,9 @@ async function approveMatchResult(
           await (thread as unknown as { setArchived: (v: boolean) => Promise<void> }).setArchived(true);
         }
       }
-    } catch { /* non-critical */ }
+    } catch (err) {
+      console.warn(`[approval] Could not close proof thread ${match.proof_thread_id}:`, err);
+    }
   }
 }
 
@@ -335,7 +338,9 @@ async function updateEmbeds(
       else applyNeedsInfoStatus(embed, adminDiscordId, note!);
 
       await adminMsg.edit({ embeds: [embed], components: [] });
-    } catch { /* non-critical */ }
+    } catch (err) {
+      console.warn(`[approval] Could not update admin review card for pending_action ${pendingAction.id}:`, err);
+    }
   }
 
   if (pendingAction.public_receipt_message_id && pendingAction.match_id) {
@@ -356,7 +361,9 @@ async function updateEmbeds(
       else applyNeedsInfoStatus(embed, adminDiscordId, note!);
 
       await receiptMsg.edit({ embeds: [embed] });
-    } catch { /* non-critical */ }
+    } catch (err) {
+      console.warn(`[approval] Could not update public receipt for pending_action ${pendingAction.id}:`, err);
+    }
   }
 }
 
@@ -375,5 +382,7 @@ async function notifyCaptain(
     } else {
       await user.send(`⚠️ An admin needs more info on your pending action.\n\n**Info needed:** ${note}`);
     }
-  } catch { /* DMs may be disabled — non-critical */ }
+  } catch (err) {
+    console.warn(`[approval] Could not DM captain ${captainDiscordId} (DMs may be disabled):`, err);
+  }
 }
