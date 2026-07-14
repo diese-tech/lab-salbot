@@ -41,7 +41,7 @@ In the Developer Portal, go to **OAuth2 → URL Generator**:
 2. Under **Bot Permissions**, check exactly the six permissions listed above
    (View Channels, Send Messages, Create Public Threads, Send Messages in
    Threads, Use Slash Commands, Manage Roles). This produces permissions
-   integer `309506083840`.
+   integer `311653567488`.
 3. Open the generated URL, pick the server, authorize.
 4. In **Server Settings → Roles**, drag the bot's role above every division
    role (Solar/Lunar/Terra) before running any division sync commands.
@@ -49,7 +49,7 @@ In the Developer Portal, go to **OAuth2 → URL Generator**:
 Or build the invite link directly:
 
 ```
-https://discord.com/api/oauth2/authorize?client_id=YOUR_CLIENT_ID&permissions=309506083840&scope=bot%20applications.commands
+https://discord.com/api/oauth2/authorize?client_id=YOUR_CLIENT_ID&permissions=311653567488&scope=bot%20applications.commands
 ```
 
 ## Slash Command Registration
