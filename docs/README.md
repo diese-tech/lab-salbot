@@ -22,7 +22,8 @@
 
 ## Workflows
 
-- [`workflows/discord-workflows.md`](workflows/discord-workflows.md) - all captain and admin commands
+- [`commands.md`](commands.md) - every slash command, what it does, and who can run it
+- [`workflows/discord-workflows.md`](workflows/discord-workflows.md) - cross-cutting behavior: review cards, proof threads, channel config
 - [`workflows/proof-threads.md`](workflows/proof-threads.md) - proof thread lifecycle
 - [`workflows/approval-pipeline.md`](workflows/approval-pipeline.md) - shared approval infrastructure
 
