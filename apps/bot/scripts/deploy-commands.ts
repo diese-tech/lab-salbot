@@ -23,6 +23,7 @@ async function main() {
     rules,
     divisionRoleConfig,
     divisionSync,
+    help,
   ] = await Promise.all([
     import('../src/commands/report-result'),
     import('../src/commands/reschedule'),
@@ -31,6 +32,7 @@ async function main() {
     import('../src/commands/rules'),
     import('../src/commands/division-role-config'),
     import('../src/commands/division-sync'),
+    import('../src/commands/help'),
   ]);
 
   const commands = [
@@ -41,6 +43,7 @@ async function main() {
     rules.data,
     divisionRoleConfig.data,
     divisionSync.data,
+    help.data,
   ];
 
   const rest = new REST().setToken(token);

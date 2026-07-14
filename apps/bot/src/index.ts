@@ -15,6 +15,7 @@ import * as updateIgn from './commands/update-ign';
 import * as rules from './commands/rules';
 import * as divisionRoleConfig from './commands/division-role-config';
 import * as divisionSync from './commands/division-sync';
+import * as help from './commands/help';
 
 // Approval handlers
 import {
@@ -41,6 +42,7 @@ const commands = new Map<string, CommandModule>([
   [rules.data.name, rules],
   [divisionRoleConfig.data.name, divisionRoleConfig],
   [divisionSync.data.name, divisionSync],
+  [help.data.name, help],
 ]);
 
 validateRequiredEnv();

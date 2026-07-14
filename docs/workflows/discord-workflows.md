@@ -1,6 +1,9 @@
 # Discord Workflows
 
-This document covers every Discord-facing workflow in the platform: what triggers it, what it produces, and what the admin sees.
+This document covers behavior that's shared across multiple commands: what
+triggers the admin review pipeline, how review cards behave, and how proof
+threads work. For what each individual command does, see
+[`../commands.md`](../commands.md).
 
 ---
 
@@ -23,239 +26,43 @@ Admin-only operational commands, such as division role setup and division sync, 
 
 ## Captain Resolution
 
-Every captain command starts with identity resolution:
+Every captain command (`/report-result`, `/reschedule`) starts with identity resolution:
 
 ```
 Discord user ID
-  → players table (discord_id)
-  → player.team_id
-  → teams.id
-  → eligible matches for that team
+  → players table (discord_id, is_captain = true)
+  → player.org_id
+  → orgs.id
+  → eligible matches for that org (status = 'scheduled', home_org_id or away_org_id matches)
 ```
 
-If the Discord user is not found in `players` or is not a captain, the command returns an ephemeral error. The user is not shown a match dropdown.
+If the Discord user is not found in `players`, or is not flagged as a captain, the command returns an ephemeral error. The user is not shown a match dropdown.
 
 This prevents:
 - Unregistered users submitting results
-- Non-captains submitting on behalf of their team
+- Non-captains submitting on behalf of their org
 - Match selection from the wrong division
-
----
-
-## `/report-result`
-
-### Input
-
-| Field | Source |
-|-------|--------|
-| Match | Supabase dropdown (week, teams, time) |
-| Winner | Select: Team A / Team B |
-| Score | Text: "2-1" |
-
-Score format: `{winner_games}-{loser_games}`. Validated before submission.
-
-### Outputs
-
-**1. Public receipt embed** — posted in `#match-results-[division]`
-
-```
-📝 Match Report — Week 3
-
-Team A vs Team B
-Winner: Team A
-Score: 2-1
-
-Submitted by: @captain
-Submitted at: 2025-01-15 18:00 UTC
-
-Status: 📝 Under Review
-```
-
-**2. Proof thread** — created under the receipt embed
-
-```
-Thread name: proof-week-3-team-a-vs-team-b
-
-Initial message:
-📸 Proof Upload
-
-Upload your match screenshots here.
-Expected: 6 screenshots (2-1 → 3 games × 2 screenshots)
-
-Progress: 0/6 uploaded
-```
-
-**3. Admin review card** — posted in `#admin-review`
-
-```
-🔍 Match Result — Pending Review
-
-Match: Week 3 · Team A vs Team B · sal-w3-gold-004
-Winner: Team A  |  Score: 2-1
-Submitted by: @captain · Division: Gold
-
-Proof Thread: [link]
-Match Record: [supabase link]
-
-[Approve] [Deny] [⚠️ Needs Info] [Open Admin Panel]
-```
-
----
-
-## `/reschedule`
-
-### Input
-
-| Field | Source |
-|-------|--------|
-| Match | Supabase dropdown (eligible future matches only) |
-| New date/time | Date+time picker |
-| Reason | Optional text |
-
-### Outputs
-
-**1. Public receipt** — posted in `#reschedules-[division]`
-
-```
-🔁 Reschedule Request — Week 3
-
-Team A vs Team B
-Current time: 2025-01-15 20:00 UTC
-Requested time: 2025-01-17 18:00 UTC
-
-Submitted by: @captain
-
-Status: 📝 Under Review
-```
-
-**2. Admin review card** — posted in `#admin-review`
-
-```
-🔍 Reschedule Request — Pending Review
-
-Match: Week 3 · Team A vs Team B
-Current: 2025-01-15 20:00 UTC
-Requested: 2025-01-17 18:00 UTC
-Reason: —
-
-[Approve] [Deny] [⚠️ Needs Info] [Open Admin Panel]
-```
-
----
-
-## `/request-admin-review`
-
-Catch-all escalation for anything not covered by structured commands.
-
-### Input
-
-| Field | Source |
-|-------|--------|
-| Issue type | Select: Match result · Scheduling · Player issue · Other |
-| Description | Text (required) |
-| Related match | Supabase dropdown (optional) |
-
-### Outputs
-
-**1. Admin review card** — posted in `#admin-review`
-
-Includes full description and optional match link. No public receipt (may be sensitive).
-
----
-
-## `/division-role-config`
-
-Admin-only setup command for division role mappings.
-
-### Subcommands
-
-| Subcommand | Purpose |
-|------------|---------|
-| `set` | Maps a division id to a Discord role selected from the role picker |
-| `list` | Shows configured division role mappings |
-
-### Behavior
-
-`/division-role-config set` stores the selected Discord role ID in `division_role_mappings`. Role IDs are not secrets; they are stored in Supabase so admins can manage mappings without deployment access.
-
-Every mapping change writes an `audit_logs` entry with:
-
-- `action_type = 'division_role_mapping_updated'`
-- `entity_type = 'division_role_mapping'`
-- `entity_id = division_id`
-- `actor_discord_id = admin Discord ID`
-
-The command requires the invoking Discord user to exist in `admin_users`.
-
----
-
-## `/division-sync`
-
-Admin-only player identity and division role sync workflow.
-
-### Preview Input
-
-`/division-sync preview` accepts a CSV attachment:
-
-```csv
-division,discord_username
-solar,diese
-lunar,player2
-terra,player3
-```
-
-`discord_username` means the actual Discord account username. The bot resolves that username in the guild, extracts the Discord user ID, and matches the Supabase player by `players.discord_username`.
-
-### Preview Output
-
-Preview mode reports:
-
-- matched rows
-- duplicate CSV usernames
-- usernames missing from the Discord server
-- players missing from Supabase
-- conflicting existing `players.discord_id` values
-- missing division role mappings
-
-Preview mode does not update Supabase, change Discord roles, or write audit logs.
-
-If there are actionable rows, the bot returns a short-lived confirmation token.
-
-### Apply Behavior
-
-`/division-sync apply token:[token]` applies a recent preview for the same admin.
-
-Apply mode:
-
-1. Links `players.discord_id` only when it is empty.
-2. Refuses to overwrite a different existing `players.discord_id`.
-3. Removes old known division roles.
-4. Adds the configured role for the CSV division.
-5. Writes audit logs for identity links and role updates.
-6. Returns a final summary of updates, skips, conflicts, and failures.
-
-Confirmation tokens are in-memory and expire after 10 minutes. If the bot restarts or the token expires, run preview again.
-
-The bot must have the Discord Manage Roles permission and its highest role must be above every division role it manages.
 
 ---
 
 ## Admin Review Card — Button Behaviors
 
+Every review card (`/report-result`, `/reschedule`, `/request-admin-review`) has exactly three buttons:
+
 | Button | Behavior |
 |--------|---------|
-| **Approve** | Executes mutation. Updates receipt embed to ✅. Updates review card. Writes audit log. |
-| **Deny** | Updates receipt embed to ❌. Updates review card. Shows modal for denial reason. Writes audit log. |
-| **⚠️ Needs Info** | Updates receipt embed to ⚠️. Updates review card. Shows modal for info request. Bot pings the submitting captain. |
-| **Open Admin Panel** | Sends ephemeral link to the website admin panel with full context pre-loaded. |
+| **Approve** | Executes the mutation for that action type. Updates the public receipt embed (if any) to ✅. Updates the review card. Writes an audit log. |
+| **Deny** | Shows a modal for the denial reason (required). Updates the receipt embed to ❌ and the review card. Writes an audit log. DMs the submitting captain with the reason. |
+| **⚠️ Needs Info** | Shows a modal for what info is needed (required). Updates the receipt embed to ⚠️ and the review card. Writes an audit log. DMs the submitting captain with the note. |
+
+Only users in `admin_users` can press these buttons — anyone else gets an ephemeral "Only admins can use this button" reply.
 
 ### Stale Approval Protection
 
 When an admin presses a button on a review card:
 
-1. Bot loads the current `pending_action` from Supabase
-2. Verifies `status == 'pending'`
-3. If already approved/denied, shows ephemeral error: "This action has already been processed."
+1. Bot claims the `pending_action` row atomically (first admin to click wins).
+2. If another admin already claimed it, the presser gets an ephemeral "This action was already processed by another admin" reply and nothing else happens.
 
 This prevents double-approval race conditions when multiple admins are reviewing simultaneously.
 
@@ -263,35 +70,33 @@ This prevents double-approval race conditions when multiple admins are reviewing
 
 ## Status Embed Updates
 
-When a `pending_action` status changes, the bot edits the relevant Discord messages:
+When a `pending_action` status changes, the bot edits the relevant Discord messages in place:
 
-- Public receipt embed: status field updated with new emoji
-- Admin review card: status field updated, buttons disabled
+- Public receipt embed (if the action type has one — `/request-admin-review` does not): status field and color updated.
+- Admin review card: status field and color updated, buttons removed.
 
-The bot does not delete old cards. They are updated in place to preserve history in the Discord channel.
+The bot does not delete old cards — they're updated in place to preserve history in the channel.
 
 ---
 
-## Attachment Handling in Proof Threads
+## Proof Threads (`/report-result` only)
 
-When a message with attachments is posted in a proof thread:
+When a captain reports a result, the bot opens a thread under the public receipt:
 
-1. Bot validates it's an image attachment
-2. Increments `matches.screenshot_count`
-3. Updates proof thread progress message
-4. Stores URL reference (optionally archives to Supabase Storage)
-5. Emits event for ForgeLens to process
-
-Non-image attachments are ignored for screenshot counting but not deleted.
+- Named `proof-week-{week}-{home-tag}-vs-{away-tag}`.
+- Tracks a running screenshot count against an expected count derived from the score (e.g. a `2-1` result expects 3 games × 2 screenshots = 6).
+- Any message with an image attachment posted in the thread increments the count and edits the thread's tracking message.
+- **Screenshot counts are tracked in memory only** (`activeProofThreads` in `apps/bot/src/lib/proof-thread.ts`) — a bot restart before the result is approved loses in-flight progress tracking, though the uploaded images themselves remain in the thread. Full persistence is a future phase.
+- On admin **Approve**, the thread is archived and locked with a closing message. Deny and Needs Info leave the thread open so captains can upload additional evidence and the admin can re-review.
 
 ---
 
 ## Channel Configuration
 
-| Channel | Purpose | Naming |
+| Channel | Purpose | Configured via |
 |---------|---------|--------|
-| `#admin-review` | All admin review cards, all divisions | Fixed name |
-| `#match-results-{slug}` | Public match receipts per division | Dynamic per division |
-| `#reschedules-{slug}` | Public reschedule receipts per division | Dynamic per division |
+| `CHANNEL_ADMIN_REVIEW` | All admin review cards, all divisions | Single env var |
+| `CHANNEL_RESULTS_SOLAR` / `_LUNAR` / `_TERRA` | Public match receipts, one per division | Env var per division |
+| `CHANNEL_RESCHEDULES_SOLAR` / `_LUNAR` / `_TERRA` | Public reschedule receipts, one per division | Env var per division |
 
-Channel IDs are stored in the `divisions` table and in environment config, not hardcoded in bot logic.
+Channel IDs live entirely in bot deployment environment variables (`apps/bot/src/lib/channels.ts`) — they are **not** stored in the `divisions` table or anywhere in Supabase. Adding a division requires adding its channel env vars to the deployment, not a database migration.
