@@ -5,6 +5,7 @@ import { db } from './lib/db';
 import { validateRequiredEnv } from './lib/config';
 import { subscribeToGodDraftRecaps } from './lib/god-draft-recap';
 import { handleProofUpload, activeProofThreads } from './lib/proof-thread';
+import { toUserMessage } from './lib/errors';
 
 // Command modules
 import * as reportResult from './commands/report-result';
@@ -130,7 +131,7 @@ client.on('interactionCreate', async (interaction) => {
     console.error('[bot] Unhandled interaction error:', err);
     try {
       if (!interaction.isRepliable()) return;
-      const content = 'An unexpected error occurred. Please try again.';
+      const content = toUserMessage(err);
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply({ content });
       } else {

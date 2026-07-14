@@ -64,8 +64,9 @@ export async function handleProofUpload(client: Client, channelId: string, attac
     await trackingMsg.edit(
       trackingMsg.content.replace(/Progress:.+screenshots/, `Progress: ${label} screenshots`)
     );
-  } catch {
+  } catch (err) {
     // Non-critical — counter update failed but upload still counted
+    console.warn(`[proof-thread] Could not update tracking message for match ${entry.matchId}:`, err);
   }
 }
 

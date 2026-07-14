@@ -77,7 +77,7 @@ export async function claimPendingActionForApproval(
   id: string,
   adminDiscordId: string
 ): Promise<boolean> {
-  const { count } = await db
+  const { data, error } = await db
     .from('pending_actions')
     .update({
       status: 'approved',
@@ -87,9 +87,10 @@ export async function claimPendingActionForApproval(
     })
     .eq('id', id)
     .eq('status', 'pending')
-    .select();
+    .select('id');
 
-  return (count ?? 0) > 0;
+  if (error) throw error;
+  return (data?.length ?? 0) > 0;
 }
 
 export async function denyPendingAction(
@@ -98,7 +99,7 @@ export async function denyPendingAction(
   adminDiscordId: string,
   note: string
 ): Promise<boolean> {
-  const { count } = await db
+  const { data, error } = await db
     .from('pending_actions')
     .update({
       status: 'denied',
@@ -109,9 +110,10 @@ export async function denyPendingAction(
     })
     .eq('id', id)
     .eq('status', 'pending')
-    .select();
+    .select('id');
 
-  return (count ?? 0) > 0;
+  if (error) throw error;
+  return (data?.length ?? 0) > 0;
 }
 
 export async function needsInfoPendingAction(
@@ -120,7 +122,7 @@ export async function needsInfoPendingAction(
   adminDiscordId: string,
   note: string
 ): Promise<boolean> {
-  const { count } = await db
+  const { data, error } = await db
     .from('pending_actions')
     .update({
       status: 'pending_info',
@@ -129,7 +131,8 @@ export async function needsInfoPendingAction(
     })
     .eq('id', id)
     .eq('status', 'pending')
-    .select();
+    .select('id');
 
-  return (count ?? 0) > 0;
+  if (error) throw error;
+  return (data?.length ?? 0) > 0;
 }
