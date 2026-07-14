@@ -129,8 +129,12 @@ client.on('interactionCreate', async (interaction) => {
   } catch (err) {
     console.error('[bot] Unhandled interaction error:', err);
     try {
-      if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
-        await interaction.reply({ content: 'An unexpected error occurred. Please try again.', ephemeral: true });
+      if (!interaction.isRepliable()) return;
+      const content = 'An unexpected error occurred. Please try again.';
+      if (interaction.deferred || interaction.replied) {
+        await interaction.editReply({ content });
+      } else {
+        await interaction.reply({ content, ephemeral: true });
       }
     } catch { /* ignore */ }
   }
