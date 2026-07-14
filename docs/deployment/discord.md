@@ -8,12 +8,17 @@ In the Discord Developer Portal:
 
 1. Create or open the SALbot application.
 2. Create a bot user.
-3. Enable the privileged Server Members Intent.
+3. On the **Bot** page, enable both privileged intents: **Server Members Intent**
+   and **Message Content Intent**. The bot process requests
+   `Guilds`, `GuildMembers`, `GuildMessages`, and `MessageContent`
+   (`apps/bot/src/index.ts`) — if either privileged toggle is off, Discord
+   closes the gateway connection immediately with `Error: Used disallowed
+   intents` and the bot crash-loops on boot. Presence Intent is not needed.
 4. Copy the bot token into the deployment environment as `DISCORD_TOKEN`.
 5. Copy the application client ID into `DISCORD_CLIENT_ID`.
 6. Copy the target server ID into `DISCORD_GUILD_ID`.
 
-`/division-sync` resolves actual Discord account usernames against guild members, so the bot needs the Server Members intent.
+`/division-sync` resolves actual Discord account usernames against guild members, so the bot needs the Server Members intent. Message Content Intent is required to read message text in commands/threads that rely on it.
 
 ## Required Bot Permissions
 
@@ -27,6 +32,25 @@ The bot needs:
 - Manage Roles
 
 For division role sync, the bot's highest Discord role must be above every division role it needs to add or remove. Discord will reject role changes if the bot role is lower than the target role.
+
+## Inviting the Bot to a Server
+
+In the Developer Portal, go to **OAuth2 → URL Generator**:
+
+1. Under **Scopes**, check `bot` and `applications.commands`.
+2. Under **Bot Permissions**, check exactly the six permissions listed above
+   (View Channels, Send Messages, Create Public Threads, Send Messages in
+   Threads, Use Slash Commands, Manage Roles). This produces permissions
+   integer `309506083840`.
+3. Open the generated URL, pick the server, authorize.
+4. In **Server Settings → Roles**, drag the bot's role above every division
+   role (Solar/Lunar/Terra) before running any division sync commands.
+
+Or build the invite link directly:
+
+```
+https://discord.com/api/oauth2/authorize?client_id=YOUR_CLIENT_ID&permissions=309506083840&scope=bot%20applications.commands
+```
 
 ## Slash Command Registration
 
