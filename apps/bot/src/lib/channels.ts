@@ -15,6 +15,20 @@ const RESCHEDULE_ENV: Record<string, string> = {
   terra: 'CHANNEL_RESCHEDULES_TERRA',
 };
 
+// Flat list of every channel env var, for startup validation (see lib/config.ts).
+// Built from the maps above so the var names never drift out of sync.
+export const CHANNEL_ENV_VARS: { envVar: string; description: string }[] = [
+  { envVar: 'CHANNEL_ADMIN_REVIEW', description: 'admin review notifications' },
+  ...Object.entries(RESULT_ENV).map(([division, envVar]) => ({
+    envVar,
+    description: `the ${division} results channel`,
+  })),
+  ...Object.entries(RESCHEDULE_ENV).map(([division, envVar]) => ({
+    envVar,
+    description: `the ${division} reschedules channel`,
+  })),
+];
+
 export function getAdminReviewChannelId(): string {
   const id = process.env.CHANNEL_ADMIN_REVIEW;
   if (!id) throw new UserFacingError('The admin review channel is not configured (CHANNEL_ADMIN_REVIEW). Ask an admin to check the bot deployment.');
