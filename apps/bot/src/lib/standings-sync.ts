@@ -7,7 +7,12 @@
 //
 // Best-effort: a failure here must not fail the match approval itself — the
 // match result is already committed. Log clearly so it isn't silently stale;
-// an admin can still press the manual "Recalculate standings" button.
+// an admin can still press the manual "Recalculate standings" button. The
+// caller places this call last and a short timeout bounds the wait here too,
+// so a slow or hanging site can never hold the approval flow open before its
+// audit log / receipt updates are written.
+const REQUEST_TIMEOUT_MS = 5000;
+
 export async function triggerStandingsRecalculation(): Promise<void> {
   const siteUrl = process.env.SAL_SITE_URL;
   const token = process.env.SAL_SITE_INTERNAL_TOKEN;
@@ -24,6 +29,7 @@ export async function triggerStandingsRecalculation(): Promise<void> {
     const res = await fetch(new URL('/api/admin/recalculate-standings', siteUrl), {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
     if (!res.ok) {
       console.error(

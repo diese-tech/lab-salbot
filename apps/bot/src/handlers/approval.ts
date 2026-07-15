@@ -265,10 +265,6 @@ async function approveMatchResult(
     score: payload.score,
   });
 
-  // Best-effort — a recalculation failure must not fail the approval itself,
-  // the match result above is already committed (audit F-01).
-  await triggerStandingsRecalculation();
-
   await writeAuditLog(db, {
     actionType: 'match_result_recorded',
     entityType: 'match',
@@ -293,6 +289,13 @@ async function approveMatchResult(
       console.warn(`[approval] Could not close proof thread ${match.proof_thread_id}:`, err);
     }
   }
+
+  // Best-effort and last: the match result, audit log, and receipt/thread
+  // updates above are the parts that must never be left half-done. This call
+  // has its own timeout (see standings-sync.ts) and never throws, but it's
+  // still ordered last so a slow or hanging site can't hold up anything the
+  // audit trail rule in AGENTS.md requires (audit F-01).
+  await triggerStandingsRecalculation();
 }
 
 async function approveReschedule(
