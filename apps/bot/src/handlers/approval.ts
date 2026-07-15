@@ -25,7 +25,7 @@ import {
   applyNeedsInfoStatus,
 } from '../lib/embeds';
 import { removeActiveProofThread } from '../lib/proof-thread';
-import { toUserMessage, UserFacingError } from '../lib/errors';
+import { toUserMessage } from '../lib/errors';
 import { triggerStandingsRecalculation } from '../lib/standings-sync';
 
 // ── Approve button ────────────────────────────────────────────────────────────────────
@@ -46,10 +46,20 @@ export async function handleApproveButton(interaction: ButtonInteraction, pendin
   }
 
   try {
+    // claimPendingActionForApproval above already flipped this row to
+    // 'approved' -- that decision is final regardless of what happens next,
+    // so every branch below must still write the pending_action_approved
+    // audit log and update the embeds. A stale/already-finalized match (the
+    // `applied: false` case) is a valid outcome, not an error: throwing here
+    // would skip both, leaving the pending action stuck at 'approved' with
+    // no audit trail and no way to deny/retry it (its precondition guards
+    // only accept a 'pending' row).
+    let applied = true;
+    let note: string | undefined;
     if (pendingAction.type === 'match_result') {
-      await approveMatchResult(interaction, pendingAction);
+      ({ applied, note } = await approveMatchResult(interaction, pendingAction));
     } else if (pendingAction.type === 'reschedule') {
-      await approveReschedule(interaction, pendingAction);
+      ({ applied, note } = await approveReschedule(interaction, pendingAction));
     } else if (pendingAction.type === 'admin_review') {
       await resolveAdminReview(interaction, pendingAction);
     }
@@ -60,11 +70,13 @@ export async function handleApproveButton(interaction: ButtonInteraction, pendin
       entityId: pendingActionId,
       actorDiscordId: interaction.user.id,
       pendingActionId,
-      newValueJson: { status: 'approved' },
+      newValueJson: { status: 'approved', applied },
     });
 
     await updateEmbeds(interaction.client, pendingAction, 'approved', interaction.user.id);
-    await interaction.editReply('✅ Approved.');
+    await interaction.editReply(
+      applied ? '✅ Approved.' : `✅ Approval recorded, but no changes were made: ${note}`
+    );
   } catch (err) {
     console.error('[approval] approve error:', err);
     await interaction.editReply(toUserMessage(err));
@@ -249,7 +261,7 @@ export async function handleRejectStatModal(interaction: ModalSubmitInteraction,
 async function approveMatchResult(
   interaction: ButtonInteraction,
   pendingAction: NonNullable<Awaited<ReturnType<typeof getPendingAction>>>
-) {
+): Promise<{ applied: boolean; note?: string }> {
   const payload = pendingAction.payload_json as unknown as MatchResultPayload;
   const match = await getMatchById(db, pendingAction.match_id!);
   if (!match) throw new Error(`Match ${pendingAction.match_id} not found`);
@@ -265,9 +277,13 @@ async function approveMatchResult(
     score: payload.score,
   });
   if (!completed) {
-    throw new UserFacingError(
-      'This match is no longer in a reportable state — it may have already been completed or corrected.'
-    );
+    // The match is no longer 'scheduled' -- already completed or corrected
+    // elsewhere. The pending action is still terminally approved (see
+    // handleApproveButton); just don't apply a mutation that's no longer valid.
+    return {
+      applied: false,
+      note: 'this match is no longer in a reportable state (already completed or corrected elsewhere).',
+    };
   }
 
   await writeAuditLog(db, {
@@ -301,21 +317,25 @@ async function approveMatchResult(
   // still ordered last so a slow or hanging site can't hold up anything the
   // audit trail rule in AGENTS.md requires (audit F-01).
   await triggerStandingsRecalculation();
+  return { applied: true };
 }
 
 async function approveReschedule(
   interaction: ButtonInteraction,
   pendingAction: NonNullable<Awaited<ReturnType<typeof getPendingAction>>>
-) {
+): Promise<{ applied: boolean; note?: string }> {
   const payload = pendingAction.payload_json as unknown as ReschedulePayload;
   const match = await getMatchById(db, pendingAction.match_id!);
   if (!match) throw new Error(`Match ${pendingAction.match_id} not found`);
 
   const rescheduled = await rescheduleMatch(db, match.id, { newDate: payload.newDate, newTime: payload.newTime });
   if (!rescheduled) {
-    throw new UserFacingError(
-      'This match is no longer in a reportable state — it may have already been completed or corrected.'
-    );
+    // Same reasoning as approveMatchResult above: a stale match is a valid
+    // outcome, not an error -- the approval itself still stands.
+    return {
+      applied: false,
+      note: 'this match is no longer in a reportable state (already completed or corrected elsewhere).',
+    };
   }
 
   await writeAuditLog(db, {
@@ -327,6 +347,7 @@ async function approveReschedule(
     oldValueJson: { scheduled_date: match.scheduled_date, scheduled_time: match.scheduled_time },
     newValueJson: { scheduled_date: payload.newDate, scheduled_time: payload.newTime },
   });
+  return { applied: true };
 }
 
 async function resolveAdminReview(
