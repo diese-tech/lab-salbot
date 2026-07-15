@@ -22,6 +22,7 @@ import {
   buildApprovalButtons,
 } from '../lib/embeds';
 import { createProofThread } from '../lib/proof-thread';
+import { isUniqueViolation } from '../lib/errors';
 
 export const data = {
   name: 'report-result',
@@ -173,13 +174,27 @@ export async function handleScoreModal(interaction: ModalSubmitInteraction) {
 
   const payload: MatchResultPayload = { winnerOrgId, score: scoreRaw, parsed };
 
-  const pendingAction = await createPendingAction(db, {
-    type: 'match_result',
-    requestedByDiscordId: interaction.user.id,
-    matchId,
-    divisionId: match.division_id as string,
-    payloadJson: payload as unknown as Record<string, unknown>,
-  });
+  let pendingAction;
+  try {
+    pendingAction = await createPendingAction(db, {
+      type: 'match_result',
+      requestedByDiscordId: interaction.user.id,
+      matchId,
+      divisionId: match.division_id as string,
+      payloadJson: payload as unknown as Record<string, unknown>,
+    });
+  } catch (err) {
+    // Postgres unique_violation (022_pending_result_uniqueness.sql on sal-site) —
+    // a match_result pending_action already exists for this match in a
+    // pending/pending_info state. Surface a friendly message instead of a raw error.
+    if (isUniqueViolation(err)) {
+      await interaction.editReply(
+        'A result for this match is already awaiting review — an admin needs to process the existing submission first.'
+      );
+      return;
+    }
+    throw err;
+  }
 
   // Public receipt
   const resultsChannelId = getResultsChannelId(match.division_id as string);

@@ -37,6 +37,10 @@ export async function getMatchById(db: SupabaseClient, matchId: string) {
   return data;
 }
 
+// Atomic status guard — only succeeds if the match is still 'scheduled'. Returns
+// false (does not throw) if a second approval of a duplicate submission, or an
+// approval landing after an admin corrected the score on the site, would
+// otherwise silently overwrite the official result.
 export async function completeMatch(
   db: SupabaseClient,
   matchId: string,
@@ -46,8 +50,8 @@ export async function completeMatch(
     awayScore: number;
     score: string;
   }
-) {
-  const { error } = await db
+): Promise<boolean> {
+  const { data, error } = await db
     .from('matches')
     .update({
       status: 'completed',
@@ -56,25 +60,33 @@ export async function completeMatch(
       away_score: params.awayScore,
       score: params.score,
     })
-    .eq('id', matchId);
+    .eq('id', matchId)
+    .eq('status', 'scheduled')
+    .select('id');
 
   if (error) throw error;
+  return (data?.length ?? 0) > 0;
 }
 
+// Atomic status guard — only succeeds if the match is still 'scheduled'. See
+// completeMatch above for why this precondition matters.
 export async function rescheduleMatch(
   db: SupabaseClient,
   matchId: string,
   params: { newDate: string; newTime: string }
-) {
-  const { error } = await db
+): Promise<boolean> {
+  const { data, error } = await db
     .from('matches')
     .update({
       scheduled_date: params.newDate,
       scheduled_time: params.newTime,
     })
-    .eq('id', matchId);
+    .eq('id', matchId)
+    .eq('status', 'scheduled')
+    .select('id');
 
   if (error) throw error;
+  return (data?.length ?? 0) > 0;
 }
 
 export async function setProofThread(
