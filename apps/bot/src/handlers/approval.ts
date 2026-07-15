@@ -26,6 +26,7 @@ import {
 } from '../lib/embeds';
 import { removeActiveProofThread } from '../lib/proof-thread';
 import { toUserMessage } from '../lib/errors';
+import { triggerStandingsRecalculation } from '../lib/standings-sync';
 
 // ── Approve button ────────────────────────────────────────────────────────────────────
 
@@ -288,6 +289,13 @@ async function approveMatchResult(
       console.warn(`[approval] Could not close proof thread ${match.proof_thread_id}:`, err);
     }
   }
+
+  // Best-effort and last: the match result, audit log, and receipt/thread
+  // updates above are the parts that must never be left half-done. This call
+  // has its own timeout (see standings-sync.ts) and never throws, but it's
+  // still ordered last so a slow or hanging site can't hold up anything the
+  // audit trail rule in AGENTS.md requires (audit F-01).
+  await triggerStandingsRecalculation();
 }
 
 async function approveReschedule(
