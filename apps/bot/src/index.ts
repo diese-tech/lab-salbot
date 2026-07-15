@@ -56,6 +56,20 @@ const client = new Client({
   ],
 });
 
+// ── Process-level safety handlers ──────────────────────────────────────────────
+// Log-and-continue on unhandled rejections so a stray rejected promise doesn't
+// take the whole bot down (Node >=15 terminates the process by default).
+process.on('unhandledRejection', (reason) => {
+  console.error('[bot] Unhandled rejection:', reason);
+});
+
+// Graceful shutdown on SIGTERM (e.g. Railway redeploys killing the process mid-operation).
+process.on('SIGTERM', async () => {
+  console.log('[bot] SIGTERM received, shutting down...');
+  await client.destroy();
+  process.exit(0);
+});
+
 client.once('ready', () => {
   console.log(`[bot] Ready as ${client.user?.tag}`);
   console.log(`[bot] Loaded commands: ${[...commands.keys()].join(', ')}`);
