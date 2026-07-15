@@ -1,3 +1,5 @@
+import { CHANNEL_ENV_VARS } from './channels';
+
 const REQUIRED_ENV = [
   'DISCORD_TOKEN',
   'DISCORD_CLIENT_ID',
@@ -15,4 +17,16 @@ export function validateRequiredEnv() {
 
 export function requiredEnvNames() {
   return [...REQUIRED_ENV];
+}
+
+// The 7 channel env vars are checked lazily at first use (see lib/channels.ts),
+// so a partially configured bot can still serve the divisions that ARE
+// configured. This just surfaces the misconfiguration at boot — as a warning,
+// not a crash — instead of leaving it to be discovered mid-workflow.
+export function warnOnMissingChannelEnv() {
+  const missing = CHANNEL_ENV_VARS.filter(({ envVar }) => !process.env[envVar]);
+  for (const { envVar, description } of missing) {
+    console.warn(`[bot] WARNING: ${envVar} is not set — ${description} will fail until configured.`);
+  }
+  return missing.map((m) => m.envVar);
 }

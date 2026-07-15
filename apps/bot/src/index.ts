@@ -2,7 +2,7 @@ import { Client, GatewayIntentBits } from 'discord.js';
 import type { ChatInputCommandInteraction } from 'discord.js';
 import { isAdminUser } from '@salbot/db';
 import { db } from './lib/db';
-import { validateRequiredEnv } from './lib/config';
+import { validateRequiredEnv, warnOnMissingChannelEnv } from './lib/config';
 import { subscribeToGodDraftRecaps } from './lib/god-draft-recap';
 import { handleProofUpload, activeProofThreads } from './lib/proof-thread';
 import { toUserMessage } from './lib/errors';
@@ -46,6 +46,7 @@ const commands = new Map<string, CommandModule>([
 ]);
 
 validateRequiredEnv();
+warnOnMissingChannelEnv();
 
 const client = new Client({
   intents: [
