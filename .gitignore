@@ -10,3 +10,6 @@ build/
 .DS_Store
 supabase/.branches
 supabase/.temp
+
+# Agent-harness worktree scratch state, not repo content
+.claude/
