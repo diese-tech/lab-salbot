@@ -14,7 +14,7 @@ both in sync if you add, remove, or change a command (`apps/bot/src/commands/hel
 | `/reschedule` | Captains | Request a new date/time for an upcoming match. Posts a public receipt and sends the request to admin review. |
 | `/request-admin-review` | Everyone | Escalate an issue (score dispute, scheduling, eligibility, other) directly to admins. No public receipt. |
 | `/rules` | Everyone | Ask a question about the league ruleset. Answered by an AI assistant restricted to the official rules text. |
-| `/update-ign` | Everyone | Request an in-game name change with screenshot proof. **Not yet implemented** — currently a no-op. |
+| `/update-ign` | Everyone | Request an in-game name change with screenshot proof. **Not yet implemented** — replies asking you to see an admin for now. |
 | `/division-role-config` | Admins | Map a division (`solar`/`lunar`/`terra`) to a Discord role, or list current mappings. |
 | `/division-sync` | Admins | Bulk-link players' Discord accounts and sync division roles from a roster CSV. Preview, then apply. |
 | `/help` | Everyone | Show this list with a link to the full reference. |
@@ -70,7 +70,7 @@ Requires `OPENROUTER_API_KEY` (and optionally `OPENROUTER_MODEL`, default `googl
 
 ### `/update-ign`
 
-**Status: not implemented.** The command is registered and appears in Discord's command list, but its handler is an empty stub — running it does nothing and Discord will show "This interaction failed."
+**Status: not implemented.** The command is registered and appears in Discord's command list, but running it just replies with an ephemeral message telling the player to ask an admin — the actual IGN-change flow (screenshot proof, admin review card) is Phase 2 work.
 
 Intended flow, per the code's own comments (`apps/bot/src/commands/update-ign.ts`):
 
