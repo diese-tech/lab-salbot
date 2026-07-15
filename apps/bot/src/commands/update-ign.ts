@@ -32,14 +32,20 @@ export const data = {
   ],
 } as const;
 
-export async function execute(_interaction: ChatInputCommandInteraction) {
-  // Phase 2 implementation stub.
-  // Full flow:
-  //   1. Resolve target player (invoker or admin-provided user option)
-  //   2. Verify invoker is registered player OR is admin (check admin_users)
-  //   3. Channel check: non-admins must be in DISCORD_ALIAS_CHANNEL_IDS
-  //   4. Validate attachment is an image MIME type
-  //   5. createPendingAction({ type: 'alias_change', payload: AliasChangePayload })
-  //   6. Post admin review card to #admin-review with Approve / Deny buttons
-  //   7. Ephemeral confirmation to invoker
+// Phase 2 implementation is not built yet. Until then, execute() just tells the
+// player to see an admin — the command definition above is kept stable so it
+// can be wired up later without breaking this option schema.
+// Full flow (planned):
+//   1. Resolve target player (invoker or admin-provided user option)
+//   2. Verify invoker is registered player OR is admin (check admin_users)
+//   3. Channel check: non-admins must be in DISCORD_ALIAS_CHANNEL_IDS
+//   4. Validate attachment is an image MIME type
+//   5. createPendingAction({ type: 'alias_change', payload: AliasChangePayload })
+//   6. Post admin review card to #admin-review with Approve / Deny buttons
+//   7. Ephemeral confirmation to invoker
+export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
+  await interaction.reply({
+    content: "IGN changes aren't available yet — please ask an admin to update your IGN for now.",
+    ephemeral: true,
+  });
 }
