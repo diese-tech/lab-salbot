@@ -26,6 +26,7 @@ import {
 } from '../lib/embeds';
 import { removeActiveProofThread } from '../lib/proof-thread';
 import { toUserMessage } from '../lib/errors';
+import { triggerStandingsRecalculation } from '../lib/standings-sync';
 
 // ── Approve button ────────────────────────────────────────────────────────────────────
 
@@ -263,6 +264,10 @@ async function approveMatchResult(
     awayScore: isWinnerHome ? parsed.loserGames : parsed.winnerGames,
     score: payload.score,
   });
+
+  // Best-effort — a recalculation failure must not fail the approval itself,
+  // the match result above is already committed (audit F-01).
+  await triggerStandingsRecalculation();
 
   await writeAuditLog(db, {
     actionType: 'match_result_recorded',
