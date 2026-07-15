@@ -25,7 +25,7 @@ import {
   applyNeedsInfoStatus,
 } from '../lib/embeds';
 import { removeActiveProofThread } from '../lib/proof-thread';
-import { toUserMessage } from '../lib/errors';
+import { toUserMessage, UserFacingError } from '../lib/errors';
 import { triggerStandingsRecalculation } from '../lib/standings-sync';
 
 // ── Approve button ────────────────────────────────────────────────────────────────────
@@ -258,12 +258,17 @@ async function approveMatchResult(
   if (!parsed) throw new Error(`Invalid score in payload: ${payload.score}`);
 
   const isWinnerHome = payload.winnerOrgId === match.home_org_id;
-  await completeMatch(db, match.id, {
+  const completed = await completeMatch(db, match.id, {
     winnerOrgId: payload.winnerOrgId,
     homeScore: isWinnerHome ? parsed.winnerGames : parsed.loserGames,
     awayScore: isWinnerHome ? parsed.loserGames : parsed.winnerGames,
     score: payload.score,
   });
+  if (!completed) {
+    throw new UserFacingError(
+      'This match is no longer in a reportable state — it may have already been completed or corrected.'
+    );
+  }
 
   await writeAuditLog(db, {
     actionType: 'match_result_recorded',
@@ -306,7 +311,12 @@ async function approveReschedule(
   const match = await getMatchById(db, pendingAction.match_id!);
   if (!match) throw new Error(`Match ${pendingAction.match_id} not found`);
 
-  await rescheduleMatch(db, match.id, { newDate: payload.newDate, newTime: payload.newTime });
+  const rescheduled = await rescheduleMatch(db, match.id, { newDate: payload.newDate, newTime: payload.newTime });
+  if (!rescheduled) {
+    throw new UserFacingError(
+      'This match is no longer in a reportable state — it may have already been completed or corrected.'
+    );
+  }
 
   await writeAuditLog(db, {
     actionType: 'match_rescheduled',

@@ -21,6 +21,20 @@ const DISCORD_ERROR_MESSAGES: Record<number, string> = {
   50013: "I'm missing a Discord permission this command needs (e.g. Manage Roles, Send Messages). Ask an admin to check my role and channel permissions.",
 };
 
+// PostgREST/Postgres unique_violation error code. Supabase's PostgrestError
+// (and the raw pg error it wraps) surface this as a `code` string field.
+// https://www.postgresql.org/docs/current/errcodes-appendix.html
+const POSTGRES_UNIQUE_VIOLATION = '23505';
+
+export function isUniqueViolation(err: unknown): boolean {
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    'code' in err &&
+    (err as { code?: unknown }).code === POSTGRES_UNIQUE_VIOLATION
+  );
+}
+
 export function toUserMessage(err: unknown): string {
   if (err instanceof UserFacingError) return err.message;
 
