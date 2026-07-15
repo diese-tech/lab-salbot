@@ -166,4 +166,11 @@ client.on('messageCreate', async (message) => {
   await handleProofUpload(client, message.channelId, message.attachments.size);
 });
 
-client.login(process.env.DISCORD_TOKEN);
+client.login(process.env.DISCORD_TOKEN).catch((err) => {
+  // Login failures (bad/rotated DISCORD_TOKEN, auth/network issues at boot) are
+  // fatal, not the kind of stray rejection the unhandledRejection handler above
+  // is meant to absorb: without this, the process stays alive but never reaches
+  // 'ready', so a supervisor sees a live process instead of a restartable crash.
+  console.error('[bot] Fatal: failed to log in to Discord:', err);
+  process.exit(1);
+});
