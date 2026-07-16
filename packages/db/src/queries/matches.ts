@@ -18,6 +18,7 @@ export async function getEligibleMatchesForCaptain(db: SupabaseClient, orgId: st
     .select(MATCH_FIELDS)
     .or(`home_org_id.eq.${orgId},away_org_id.eq.${orgId}`)
     .eq('status', 'scheduled')
+    .is('archived_at', null)
     .gte('scheduled_date', today)
     .order('scheduled_date')
     .order('scheduled_time');

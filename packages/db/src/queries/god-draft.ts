@@ -24,7 +24,6 @@ export type GodDraftPickRow = {
   org_id: string;
   god_id: string;
   god_name: string;
-  player_ign?: string | null;
   slot: number;
 };
 
@@ -71,7 +70,7 @@ export async function getGodDraftRecapData(
   const [pickRes, banRes] = await Promise.all([
     db
       .from('god_picks')
-      .select('session_id, match_id, game_number, org_id, god_id, god_name, player_ign, slot')
+      .select('session_id, match_id, game_number, org_id, god_id, god_name, slot')
       .eq('session_id', sessionId)
       .order('slot'),
     db
