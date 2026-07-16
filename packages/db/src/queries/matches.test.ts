@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { completeMatch, rescheduleMatch } from "./matches";
+import { completeMatch, getEligibleMatchesForCaptain, rescheduleMatch } from "./matches";
 
 // Regression test for F-02b: completeMatch/rescheduleMatch used to update the
 // `matches` row unconditionally, with no `status = 'scheduled'` precondition.
@@ -71,6 +71,31 @@ describe("completeMatch status precondition", () => {
     // Row is untouched — no overwrite of an already-completed/corrected result.
     expect(rows.get("m-2")?.status).toBe("completed");
     expect(rows.get("m-2")?.winner_org_id).toBeUndefined();
+  });
+});
+
+describe("getEligibleMatchesForCaptain archived filter", () => {
+  it("excludes site-archived matches even when still 'scheduled'", async () => {
+    const rows: Row[] = [
+      { id: "m-5", status: "scheduled", home_org_id: "org-1", scheduled_date: "2099-01-01", archived_at: null },
+      { id: "m-6", status: "scheduled", home_org_id: "org-1", scheduled_date: "2099-01-01", archived_at: "2026-07-01T00:00:00Z" },
+    ];
+    const filters: Array<(row: Row) => boolean> = [];
+    const builder = {
+      select: () => builder,
+      or: () => builder,
+      eq: (col: string, val: unknown) => (filters.push((row) => row[col] === val), builder),
+      is: (col: string, val: unknown) => (filters.push((row) => row[col] === val), builder),
+      gte: (col: string, val: string) => (filters.push((row) => String(row[col]) >= val), builder),
+      order: () => builder,
+      then: (resolve: (res: { data: Row[]; error: null }) => void) =>
+        resolve({ data: rows.filter((row) => filters.every((f) => f(row))), error: null }),
+    };
+    const db = { from: () => builder } as never;
+
+    const eligible = await getEligibleMatchesForCaptain(db, "org-1");
+
+    expect(eligible.map((row: Row) => row.id)).toEqual(["m-5"]);
   });
 });
 

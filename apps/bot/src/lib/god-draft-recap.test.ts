@@ -20,8 +20,8 @@ const recap: GodDraftRecapData = {
     },
   },
   picks: [
-    { session_id: 'draft-1', match_id: 'match-1', game_number: 1, org_id: 'org-a', god_id: 'athena', god_name: 'Athena', player_ign: 'Aster', slot: 0 },
-    { session_id: 'draft-1', match_id: 'match-1', game_number: 1, org_id: 'org-b', god_id: 'ymir', god_name: 'Ymir', player_ign: 'Boreal', slot: 1 },
+    { session_id: 'draft-1', match_id: 'match-1', game_number: 1, org_id: 'org-a', god_id: 'athena', god_name: 'Athena', slot: 0 },
+    { session_id: 'draft-1', match_id: 'match-1', game_number: 1, org_id: 'org-b', god_id: 'ymir', god_name: 'Ymir', slot: 1 },
   ],
   bans: [
     { session_id: 'draft-1', match_id: 'match-1', game_number: 1, org_id: 'org-a', god_id: 'loki', god_name: 'Loki', slot: 0 },
@@ -40,12 +40,12 @@ vi.mock('@salbot/db', async () => {
 });
 
 describe('god draft recap embeds', () => {
-  it('contains match, picks with player IGNs, bans by team, and vault summary', () => {
+  it('contains match, picks, bans by team, and vault summary', () => {
     const json = buildGodDraftRecapEmbed(recap).toJSON();
     expect(json.title).toContain('Game 1');
     expect(json.description).toContain('ALP vs BET');
     expect(json.fields?.find((field) => field.name === 'ALP Picks')?.value).toContain('Athena');
-    expect(json.fields?.find((field) => field.name === 'ALP Picks')?.value).toContain('Aster');
+    expect(json.fields?.find((field) => field.name === 'ALP Picks')?.value).toContain('Unassigned');
     expect(json.fields?.find((field) => field.name === 'BET Bans')?.value).toContain('Ra');
     expect(json.fields?.find((field) => field.name === 'Vaulted Next Game')?.value).toContain('Ymir');
   });

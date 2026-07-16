@@ -11,7 +11,8 @@ export type MatchStatus =
   | 'scheduled'
   | 'live'
   | 'completed'
-  | 'postponed';
+  | 'postponed'
+  | 'forfeit';
 
 export type AuditActionType =
   | 'pending_action_created'
