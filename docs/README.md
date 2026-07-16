@@ -1,5 +1,9 @@
 # Documentation Index
 
+## Production Audit
+
+- [`audit-production-readiness-2026-07-14.md`](audit-production-readiness-2026-07-14.md) - **authoritative platform audit** (findings, launch plan, go/no-go); maintained identically in sal-site
+
 ## Start Here
 
 - [`onboarding/getting-started.md`](onboarding/getting-started.md) - new contributor orientation
