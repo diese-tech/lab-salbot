@@ -1,5 +1,7 @@
 # Stat Approval Lifecycle
 
+> **Status:** Future Phase 4 design specification. ForgeLens and this OCR-driven lifecycle are not implemented or deployed.
+
 Stats are never written automatically. Every stat passes through human review before it becomes official.
 
 ---

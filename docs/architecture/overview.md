@@ -2,17 +2,14 @@
 
 ## System Design
 
-The SAL operations platform is a four-component system. Each component has a distinct and non-overlapping responsibility. Blurring these boundaries is the most common source of operational bugs.
+The current SAL operations platform combines this repository's Discord bot, Supabase, and the separately maintained [`sal-site`](https://github.com/diese-tech/sal-site). ForgeLens is a future Phase 4 design. Each component has a distinct responsibility; blurring these boundaries is a common source of operational bugs.
 
 ```
-Discord (workflow intake)
-     │
-     ▼
-Supabase (source of truth)
-     │              │
-     ▼              ▼
-ForgeLens        Website
-(OCR/stats)   (control center)
+Discord ──► salbot ──► Supabase ◄── sal-site
+ workflow     intake    source of     web/control center
+   UI          API        truth
+
+Future Phase 4: proof screenshots ──► ForgeLens ──► pending_stat_records
 ```
 
 ---
@@ -54,9 +51,11 @@ The bot handles:
 
 The bot does **not** store state. It reads from Supabase and writes back to Supabase. It uses Discord as a display surface.
 
-### Website
+### `sal-site`
 
-**Role:** Operational control center.
+**Status:** Current, separate repository.
+
+**Role:** Public website and operational control center.
 
 The website handles:
 
@@ -69,21 +68,23 @@ The website handles:
 - Player and team pages
 - Admin override capabilities
 
-The website is where detailed work happens. Discord is where fast triage happens.
+`sal-site` is where detailed web work happens. Discord is where fast triage happens. This repository does not contain a web application package.
 
-### ForgeLens
+### ForgeLens (Future)
+
+**Status:** Phase 4 design only; no runtime or deployment exists today.
 
 **Role:** OCR processor.
 
-ForgeLens:
+A future ForgeLens implementation would:
 
-- Watches proof threads for new screenshots
-- Processes images through OCR pipeline
-- Extracts player stats
-- Assigns confidence scores
-- Creates `pending_stat_records` for admin review
+- Watch proof threads for new screenshots
+- Process images through an OCR pipeline
+- Extract player stats
+- Assign confidence scores
+- Create `pending_stat_records` for admin review
 
-ForgeLens never directly writes to official stats. It produces pending records only.
+If implemented, ForgeLens must never directly write to official stats. It produces pending records only.
 
 ---
 
@@ -101,7 +102,7 @@ Captain: /report-result
 → Bot posts admin review card in #admin-review
 → Bot writes audit log entry
 → Captain uploads screenshots to proof thread
-→ ForgeLens processes screenshots → pending_stat_records
+→ [Future Phase 4] ForgeLens processes screenshots → pending_stat_records
 → Admin reviews pending_action
 → Admin approves → match.status = completed, winner/score written
 → Audit log records mutation with actor, old value, new value
@@ -157,7 +158,7 @@ Admin review cards support four actions:
 | **Approve** | Executes the mutation. Writes audit log. Updates Discord embeds. |
 | **Deny** | Marks pending_action as denied. Updates Discord embeds. Optional admin note. |
 | **Needs Info** | Marks pending_action as pending_info. Updates embeds with ⚠️. |
-| **Open Admin Panel** | Deep links to the website control center with full context. |
+| **Open Admin Panel** | Deep links to `sal-site` with full context. |
 
 ---
 
@@ -173,8 +174,8 @@ All entities carry a `division_id`. The schema supports multiple concurrent divi
 |---------|--------|---------|
 | Bot offline | No new commands processed | Bot restart; pending_actions already in Supabase are not lost |
 | Discord message deleted | Receipt lost from Discord | Evidence still in Supabase Storage and audit logs |
-| Failed OCR | Stats not extracted | Retry via admin panel; manual stat entry available |
-| Bad approval | Incorrect match mutation | Correction via website admin panel; audit log preserved |
+| Future OCR failure | Stats not extracted | Match approval remains independent; use `sal-site` manual review when that Phase 4 flow exists |
+| Bad approval | Incorrect match mutation | Correction via `sal-site`; audit log preserved |
 | Supabase outage | Full system halt | No state loss; bot reconnects on restore |
 
 ---

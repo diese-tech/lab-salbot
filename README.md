@@ -2,7 +2,7 @@
 
 **SAL League Operations Platform**
 
-A lightweight competition operations platform for the SAL league. This is not a Discord bot — Discord is the workflow intake layer. The system is a full operations stack: match lifecycle management, evidence collection, admin approval pipelines, OCR-assisted stat extraction, and compliance-grade audit logging.
+A lightweight competition operations platform for the SAL league. This is not just a Discord bot — Discord is the workflow intake layer. The current platform combines this repository's bot with Supabase and the separately maintained [`sal-site`](https://github.com/diese-tech/sal-site) web application. ForgeLens OCR remains a future design.
 
 ---
 
@@ -18,36 +18,24 @@ This platform exists to solve three operational problems:
 
 ## Architecture
 
+Current production components:
+
 ```
-┌─────────────────────────────────────────────────────────┐
-│                   DISCORD (Workflow UI)                  │
-│  Captain commands → public receipts → admin review       │
-└────────────────────────┬────────────────────────────────┘
-                         │
-                         ▼
-┌─────────────────────────────────────────────────────────┐
-│               SUPABASE (Source of Truth)                 │
-│  matches · schedules · players · pending_actions         │
-│  audit_logs · standings · evidence references            │
-└──────────┬──────────────────────┬───────────────────────┘
-           │                      │
-           ▼                      ▼
-┌──────────────────┐   ┌──────────────────────────────────┐
-│    FORGELENS     │   │       WEBSITE (Control Center)   │
-│  OCR · parsing   │   │  admin queue · audit history     │
-│  stat extraction │   │  score corrections · stat review │
-│  confidence score│   │  standings · player/team pages   │
-└──────────────────┘   └──────────────────────────────────┘
+Discord ──► salbot ──► Supabase ◄── sal-site
+ workflow     intake    source of     web/control center
+   UI          API        truth
 ```
+
+ForgeLens is retained as a Phase 4 architecture proposal only. There is no ForgeLens runtime package or deployment in the current workspace.
 
 ### Component Responsibilities
 
-| Component | Role |
-|-----------|------|
-| **Supabase** | Authoritative state. Owns all entities, relationships, lifecycle, identifiers. |
-| **Discord Bot** | Workflow intake. Captain commands, admin operations, public receipts, admin review cards, proof threads. |
-| **Website** | Operational control center. Complex edits, audit history, stat review, corrections. |
-| **ForgeLens** | OCR processor. Extracts stats from screenshots, generates confidence scores, creates pending stat records for review. |
+| Component | Status | Role |
+|-----------|--------|------|
+| **Supabase** | Current | Authoritative state. Owns all entities, relationships, lifecycle, and identifiers. |
+| **Discord Bot** | Current; this repository | Workflow intake, captain commands, admin operations, public receipts, review cards, and proof threads. |
+| **[`sal-site`](https://github.com/diese-tech/sal-site)** | Current; separate repository | Public website and operational control center. |
+| **ForgeLens** | Future Phase 4 design | Proposed OCR processor for screenshot stat extraction and human-reviewed pending records. |
 
 **Discord is not a database. Supabase is.**
 
@@ -121,9 +109,10 @@ Every actionable command produces two posts:
 | Admin review card | `#admin-review` | Triage, approval, workflow actions |
 
 Proof threads attached to match reports:
+
 - Track screenshot upload progress (`0/6 uploaded → 4/6 → ✅ complete`)
-- Are monitored by ForgeLens for OCR processing
 - Are stored as evidence references in Supabase Storage
+- Provide the proposed input surface for a future ForgeLens implementation
 
 ---
 
@@ -140,9 +129,9 @@ Proof threads attached to match reports:
 
 ---
 
-## OCR Pipeline
+## Future OCR Design
 
-ForgeLens watches proof threads, processes screenshots through OCR, and generates pending stat records with confidence scores. **OCR never directly mutates official stats.** Every extracted stat passes through admin review before it becomes official.
+ForgeLens is not implemented or deployed. The Phase 4 design would process proof-thread screenshots and generate pending stat records with confidence scores. If implemented, **OCR must never directly mutate official stats**; every extracted stat must pass through admin review.
 
 ```
 Screenshot uploaded
@@ -160,27 +149,20 @@ Screenshot uploaded
 ```
 salbot/
 ├── apps/
-│   ├── bot/              # Discord bot (Discord.js, TypeScript)
-│   └── web/              # Next.js admin panel
+│   └── bot/              # Discord bot (Discord.js, TypeScript)
 ├── packages/
 │   ├── db/               # Supabase client, generated types, query helpers
 │   └── shared/           # Shared types, constants, utility functions
-├── services/
-│   └── forgelens/        # OCR/stat extraction service
-├── docs/                 # All documentation
+├── docs/                 # Operations docs and future design specifications
 ├── database/
 │   ├── migrations/       # SQL migration files
-│   ├── schema/           # Schema reference docs and ERDs
 │   └── seeds/            # Development seed data
-├── infra/
-│   └── supabase/         # Supabase config, storage policies, RLS rules
-├── scripts/
-│   ├── setup/            # Environment setup scripts
-│   └── maintenance/      # Operational maintenance scripts
 └── .github/
     ├── workflows/        # CI/CD
     └── ISSUE_TEMPLATE/   # Issue templates
 ```
+
+The website/control center is maintained in [`diese-tech/sal-site`](https://github.com/diese-tech/sal-site), not as a package in this workspace.
 
 ---
 
@@ -188,7 +170,7 @@ salbot/
 
 - **Zero silent mutations** — every state change is logged to `audit_logs`.
 - **Human-in-the-loop approvals** — no automated approval of match results or stat records.
-- **Recovery by default** — every action is reversible or correctable via the website panel.
+- **Recovery by default** — every action is reversible or correctable through audited admin workflows and `sal-site`.
 - **Compliance-grade receipts** — public Discord posts constitute Hi-Rez acceptable evidence archives.
 - **Multi-league ready** — all entities are scoped by `division_id`. Adding a new league requires no schema changes.
 
@@ -202,7 +184,6 @@ Current operations docs:
 
 - [`docs/architecture/operations.md`](docs/architecture/operations.md) - reusable bot operations engine
 - [`docs/deployment/discord.md`](docs/deployment/discord.md) - Discord setup and command registration
-
 - [`docs/architecture/overview.md`](docs/architecture/overview.md) — system design
 - [`docs/onboarding/getting-started.md`](docs/onboarding/getting-started.md) — contributor setup
 - [`docs/workflows/discord-workflows.md`](docs/workflows/discord-workflows.md) — captain and admin workflows

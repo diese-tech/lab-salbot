@@ -10,6 +10,8 @@ For detailed technical ADRs, see `docs/adrs/`. This file captures higher-level p
 
 ## 2025-01-01 — Monorepo with pnpm Workspaces
 
+> Superseded in part by the 2026-07-16 active-workspace decision below. This section is retained as historical context.
+
 ### Decision
 
 Single repository with pnpm workspaces containing `apps/bot`, `apps/web`, `packages/db`, `packages/shared`, `services/forgelens`.
@@ -110,7 +112,7 @@ See `docs/adrs/ADR-005-pending-actions.md` for full reasoning.
 
 ### Decision
 
-ForgeLens creates `pending_stat_records`. Stats are written to `player_stats` only after human admin approval.
+If ForgeLens is implemented, it creates `pending_stat_records`. Stats are written to `player_stats` only after human admin approval.
 
 ### Why
 
@@ -174,7 +176,7 @@ A best-of-3 match requires 6 screenshots minimum. A best-of-5 requires 10. Disco
 
 - No screenshot upload limit per match
 - Both captains can contribute
-- ForgeLens has a clean watch surface
+- A future ForgeLens implementation has a clean watch surface
 - Thread URL is a permanent compliance reference
 
 ### Tradeoffs
@@ -215,6 +217,34 @@ The SAL rulebook is small (order of thousands of tokens). Stuffing the entire ru
 | Hardcoded FAQ responses | Can't handle novel questions; brittle to maintain |
 
 See `docs/adrs/ADR-007-llm-rules-assistant.md` for full reasoning.
+
+---
+
+## 2026-07-16 — Restrict the Active Workspace to Deployed Components
+
+### Decision
+
+The active pnpm workspace contains only `apps/bot`, `packages/db`, and `packages/shared`.
+
+The current website/control center is maintained in the separate [`diese-tech/sal-site`](https://github.com/diese-tech/sal-site) repository. ForgeLens remains a Phase 4 architecture proposal; it has no runtime package or deployment until that phase is explicitly approved.
+
+### Why
+
+- The removed `apps/web` and `services/forgelens` packages contained placeholders, not working applications.
+- Placeholder packages inflated installs, builds, and dependency audits.
+- Treating them as active made contributor and deployment documentation disagree with production reality.
+- Keeping the ForgeLens constraints as design documentation preserves prior safety decisions without presenting an imaginary service as operational.
+
+### Expected Benefits
+
+- One install and CI graph for the code this repository actually ships.
+- Clear ownership between salbot and `sal-site`.
+- Future ForgeLens implementation begins from an approved design rather than a misleading empty package.
+
+### Tradeoffs
+
+- Cross-repository website changes require coordinated pull requests.
+- A future ForgeLens implementation must deliberately add its package and operational surface when Phase 4 begins.
 
 ---
 

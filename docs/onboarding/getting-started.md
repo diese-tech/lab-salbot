@@ -6,14 +6,14 @@ Welcome to the SAL operations platform. This guide covers what you need to know 
 
 ## What You're Working On
 
-This is not a Discord bot project. It is a competition operations platform. The Discord bot is one component of four. Before writing code, read:
+This repository contains the Discord workflow application and its shared packages for a wider competition operations platform. The web/control-center application lives in [`diese-tech/sal-site`](https://github.com/diese-tech/sal-site), and ForgeLens remains a future Phase 4 design. Before writing code, read:
 
 1. [`docs/architecture/overview.md`](../architecture/overview.md) — system design and component responsibilities
 2. [`docs/operational-philosophy.md`](../operational-philosophy.md) — founding principles
 3. [`docs/architecture/platform-split.md`](../architecture/platform-split.md) — what belongs where
 4. [`docs/database/mutation-patterns.md`](../database/mutation-patterns.md) — how state changes are made
 
-If you are adding a new feature that touches the approval pipeline, audit logs, or OCR pipeline, read the relevant ADR in [`docs/adrs/`](../adrs/) first.
+If you are adding a new feature that touches the approval pipeline or audit logs, read the relevant ADR in [`docs/adrs/`](../adrs/) first. The OCR documents describe future constraints, not a deployed service.
 
 ---
 
@@ -34,15 +34,14 @@ Prerequisites:
 ```
 salbot/
 ├── apps/bot/        Discord bot (Discord.js + TypeScript)
-├── apps/web/        Next.js admin panel
 ├── packages/db/     Supabase client + generated types
 ├── packages/shared/ Shared types + utilities
-├── services/forgelens/ OCR/stat extraction service
-├── docs/            All documentation
+├── docs/            Operations docs + future design specifications
 ├── database/        SQL migrations + schema docs
-├── infra/           Supabase config
-└── scripts/         Setup + maintenance scripts
+└── .github/         CI and contribution configuration
 ```
+
+Use the [`sal-site`](https://github.com/diese-tech/sal-site) repository for web application development. A ForgeLens runtime should not be added until Phase 4 is explicitly approved.
 
 ---
 

@@ -21,9 +21,8 @@ labels: bug
 - [ ] Discord bot — command handling
 - [ ] Discord bot — approval pipeline
 - [ ] Discord bot — proof threads
-- [ ] Website — admin panel
-- [ ] ForgeLens — OCR
 - [ ] Database / Supabase
+- [ ] Documentation / future design
 - [ ] Other
 
 ## Is this affecting live league operations?

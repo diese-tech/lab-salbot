@@ -40,7 +40,7 @@ Expected: 6 screenshots (Score: 2-1 · 3 games × 2 per game)
 Progress: 0/6 uploaded
 
 Both teams' captains may upload screenshots.
-Screenshots are processed automatically for stats.
+Screenshots are retained as match evidence.
 ```
 
 The `screenshot_expected` count is derived from the submitted score:
@@ -119,9 +119,11 @@ The `result_screenshot_url` column on `matches` stores the primary evidence URL.
 
 ---
 
-## ForgeLens Trigger
+## Future ForgeLens Trigger
 
-Every uploaded attachment triggers a ForgeLens processing event:
+> **Status:** Future Phase 4 design. ForgeLens is not implemented or deployed, and uploads do not currently trigger OCR.
+
+A future implementation may emit this processing event for each uploaded attachment:
 
 ```
 proof_thread_screenshot_uploaded event
@@ -131,7 +133,7 @@ proof_thread_screenshot_uploaded event
   → uploader_discord_id
 ```
 
-ForgeLens processes asynchronously. OCR results appear as `pending_stat_records` and do not affect the approval flow for the match result itself.
+ForgeLens would process asynchronously. OCR results would appear as `pending_stat_records` and would not affect the approval flow for the match result itself.
 
 ---
 
@@ -139,7 +141,7 @@ ForgeLens processes asynchronously. OCR results appear as `pending_stat_records`
 
 | Failure | Behavior |
 |---------|---------|
-| Bot offline during upload | Screenshots not counted. Admin manually adjusts or re-triggers via admin panel. |
-| ForgeLens offline | Screenshots archived; OCR processing queued for retry. Match approval unaffected. |
-| Screenshot count desync | Admin panel shows actual count from `matches.screenshot_count`. Can be corrected by admin. |
+| Bot offline during upload | Screenshots not counted. Admin manually adjusts or re-triggers through `sal-site`. |
+| Future ForgeLens unavailable | No OCR occurs. Match approval remains independent and screenshots remain evidence. |
+| Screenshot count desync | `sal-site` shows the database count from `matches.screenshot_count`; an admin can correct it. |
 | Proof thread deleted | Match approval unaffected. URL stored in Supabase. Screenshot URLs in storage. |

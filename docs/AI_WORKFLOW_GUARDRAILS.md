@@ -39,7 +39,7 @@ Admin-only operational setup and identity maintenance is the exception. Commands
 
 ### 3. OCR never writes to player_stats
 
-ForgeLens creates `pending_stat_records` only.
+ForgeLens is a future Phase 4 design, not a deployed service. If implemented, it creates `pending_stat_records` only.
 
 `player_stats` rows are written only by the approval handler after an admin explicitly approves a `pending_stat_record`.
 
@@ -51,7 +51,7 @@ Corrections are new rows. History is preserved.
 
 ### 5. Supabase is the state
 
-Never store authoritative state in bot memory, Discord message content, or the ForgeLens service.
+Never store authoritative state in bot memory, Discord message content, or a future ForgeLens service.
 
 All reads for match data, player data, and pending actions come from Supabase.
 
@@ -94,8 +94,8 @@ Do not add defensive checks for internal function call sequences where the calle
 
 These features are explicitly deferred. Do not implement them unless `ROADMAP.md` has been updated to include them in the current phase.
 
-- Website admin panel (Phase 3)
-- ForgeLens OCR pipeline (Phase 4)
+- Adding a web package here; web work belongs in `diese-tech/sal-site`
+- ForgeLens OCR runtime (Phase 4; design documents only today)
 - Standings calculation (Phase 5)
 - Player/team pages (Phase 5)
 - OCR auto-approval
@@ -116,7 +116,7 @@ Any change that:
 - adds a new `pending_action` type
 - changes `audit_logs` schema
 - changes how `matches` mutations work
-- changes ForgeLens OCR pipeline behavior
+- changes future ForgeLens OCR constraints or pipeline behavior
 - modifies approval handler logic
 
 These are operationally critical paths. Flag them for explicit review, not just CI passing.
@@ -129,8 +129,8 @@ These are operationally critical paths. Flag them for explicit review, not just 
 |-----------|-------------|----------------|
 | Discord bot | `pending_actions`, `audit_logs`, `matches` (via approval handler) | `player_stats` directly |
 | Discord bot admin operations | `audit_logs`, `division_role_mappings`, empty `players.discord_id`, Discord roles | conflicting `players.discord_id` overwrites |
-| ForgeLens | `pending_stat_records` | `player_stats`, `matches`, `pending_actions` |
-| Website | Any table via service role | (none, but all mutations must write audit_log) |
+| Future ForgeLens | `pending_stat_records` | `player_stats`, `matches`, `pending_actions` |
+| `sal-site` | Any table via service role | (none, but all mutations must write audit_log) |
 | Supabase RLS | Enforces boundaries | N/A |
 
 ---

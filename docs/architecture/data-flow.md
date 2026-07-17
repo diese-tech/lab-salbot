@@ -2,6 +2,8 @@
 
 Per-workflow data flows. Use this when tracing a bug or designing a new workflow feature.
 
+> **Status:** ForgeLens/OCR steps in this document are future Phase 4 design. There is no ForgeLens runtime or deployment today.
+
 ---
 
 ## `/report-result` — Full Flow
@@ -37,9 +39,9 @@ Per-workflow data flows. Use this when tracing a bug or designing a new workflow
   │ 11. Detect new attachment in proof thread
   │ 12. Increment screenshot count in thread message
   │ 13. Store attachment URL reference in Supabase Storage (optional archive)
-  │ 14. Emit event to ForgeLens for OCR processing
+  │ 14. [Future Phase 4] Emit event to ForgeLens for OCR processing
   │
-[ForgeLens: OCR processor]
+[Future ForgeLens: OCR processor]
   │ 15. Receive screenshot URL
   │ 16. Run OCR
   │ 17. Extract player stats
@@ -110,10 +112,10 @@ created (pending)
 
 ---
 
-## OCR Stat Record Lifecycle
+## Future OCR Stat Record Lifecycle
 
 ```
-ForgeLens creates pending_stat_record
+[Future Phase 4] ForgeLens creates pending_stat_record
   │
   ├── confidence >= threshold → admin review queue
   │

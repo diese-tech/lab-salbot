@@ -11,7 +11,7 @@ This is a planning tool for deciding what to build next, in what order, and why.
 **Phase 0 complete. Operations foundation partially implemented.**
 
 The repository scaffold is in place:
-- monorepo structure
+- active pnpm workspace for `apps/bot`, `packages/db`, and `packages/shared`
 - full documentation system
 - architecture decision records
 - initial Supabase schema and migrations
@@ -22,6 +22,8 @@ The repository scaffold is in place:
 - `/division-sync` preview/apply
 
 The captain match approval pipeline remains the main MVP focus. Admin-only identity and division role operations are implemented as audited direct operations.
+
+The current web/control-center application is maintained in [`diese-tech/sal-site`](https://github.com/diese-tech/sal-site), not this workspace. ForgeLens has no runtime scaffold or deployment; it remains future Phase 4 design.
 
 ---
 
@@ -70,38 +72,42 @@ All three commands work end-to-end. Admins can process any captain request from 
 
 ---
 
-## Phase 3 — Website Admin Panel
+## Phase 3 — `sal-site` Web Control Center
 
-**Goal:** The website becomes a fully functional alternative to Discord triage.
+**Repository:** [`diese-tech/sal-site`](https://github.com/diese-tech/sal-site), maintained and deployed separately.
+
+**Goal:** Continue making `sal-site` a fully functional alternative to Discord triage.
 
 ### Deliverables
 
-- [ ] Next.js project setup with Supabase auth
+- [ ] Keep the shared pending-action contract aligned with salbot
 - [ ] Admin review queue — list, filter, paginate by type/status/division
-- [ ] Pending action detail view — approve/deny/needs-info from website
+- [ ] Pending action detail view — approve/deny/needs-info from `sal-site`
 - [ ] Match detail view with full `audit_logs` timeline
 - [ ] Score correction and match edit UI
 - [ ] Proof thread screenshot gallery view
 
 ### Done When
 
-An admin can process any pending action from the website without touching Discord. The website approval goes through the same `pending_actions` pipeline as Discord buttons.
+An admin can process any pending action from `sal-site` without touching Discord. Its approval path goes through the same `pending_actions` pipeline as Discord buttons.
 
 ---
 
 ## Phase 4 — ForgeLens OCR
 
+**Status:** Future design only. No ForgeLens runtime package or deployment exists.
+
 **Goal:** Screenshots are processed automatically and stats appear in an admin review queue.
 
 ### Deliverables
 
-- [ ] ForgeLens service scaffold and deployment
+- [ ] Approve the Phase 4 implementation boundary and create a runtime package
 - [ ] Webhook receiver for screenshot uploads from bot
 - [ ] OCR pipeline (Tesseract or cloud provider)
 - [ ] Stat extraction and confidence scoring
 - [ ] `pending_stat_records` creation with `confidence` field
 - [ ] Confidence-based routing (standard / flagged / manual queue)
-- [ ] Admin stat review UI in website
+- [ ] Admin stat review UI in `sal-site`
 - [ ] Player name linking UI
 - [ ] Stat approval → `player_stats` write + `audit_log`
 - [ ] ForgeLens retry queue with dead-letter handling
@@ -125,7 +131,7 @@ A proof thread screenshot produces a `pending_stat_record` an admin can review a
 
 ### Done When
 
-The website shows accurate standings and player stats. All data derives from Supabase; no manual entry required.
+`sal-site` shows accurate standings and player stats. All data derives from Supabase; no manual entry required.
 
 ---
 
@@ -161,7 +167,7 @@ These are ideas that may never happen. They are listed here to prevent them from
 
 | Feature | Reason Deferred |
 |---------|----------------|
-| Website admin panel | Phase 3 — Discord approval sufficient for MVP |
+| Additional `sal-site` admin workflows | Phase 3 — tracked in the separate web repository |
 | ForgeLens OCR | Phase 4 — not blocking match operations |
 | Standings | Phase 5 — depends on confirmed match pipeline |
 | Public player pages | Phase 5 — depends on approved stats |
@@ -176,5 +182,5 @@ These are ideas that may never happen. They are listed here to prevent them from
 | Captain adoption of slash commands | Product | Mitigated by low-friction UX and onboarding |
 | Discord CDN URL expiry for evidence | Operational | Mitigated by Supabase Storage archival in Phase 1 |
 | ForgeLens OCR accuracy on low-res screenshots | Technical | Mitigated by confidence routing and manual correction |
-| Admin review backlog at scale | Operational | Mitigated by batch approval in Phase 3 website |
+| Admin review backlog at scale | Operational | Mitigated by batch approval in Phase 3 `sal-site` work |
 | Multi-admin race condition on approvals | Technical | Mitigated by atomic `WHERE status='pending'` claim |

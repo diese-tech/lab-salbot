@@ -1,5 +1,7 @@
 # ADR-003: OCR Output Never Directly Updates Official Stats
 
+> **Implementation status:** Future Phase 4 constraint. ForgeLens is not implemented or deployed.
+
 **Status:** Accepted
 **Date:** 2025-01-01
 **Deciders:** Platform architecture

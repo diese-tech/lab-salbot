@@ -8,10 +8,9 @@ Operational incidents affecting league operations. Use this during live incident
 
 | Level | Description | Response Time |
 |-------|-------------|---------------|
-| P1 | Match results cannot be submitted; active match in progress | Immediate |
+| P1 | Match results cannot be submitted or Supabase is unavailable | Immediate |
 | P2 | Bot offline; matches in flight have pending actions unprocessed | < 30 min |
-| P3 | OCR processing failing; stat records not being generated | < 2 hours |
-| P4 | Website admin panel degraded; Discord approvals still functional | < 4 hours |
+| P3 | `sal-site` degraded; Discord approvals still functional | < 4 hours |
 
 ---
 
@@ -30,7 +29,7 @@ Steps:
 
 Recovery after restart:
 - All `pending_actions` with `status = 'pending'` are preserved in Supabase
-- Admins can still process them via the website admin panel
+- Admins can still inspect them through `sal-site`
 - No data is lost from bot downtime
 
 ---
@@ -44,34 +43,15 @@ Steps:
 1. Check if bot is receiving Discord interaction events
 2. Verify Supabase write permissions (`service_role` key in use)
 3. Check for locked rows in `pending_actions` (uncommon but possible under high load)
-4. Try approving via website admin panel as fallback
+4. Try approving through `sal-site` as a fallback
 
-Website admin panel is a full fallback for all Discord approval actions. If Discord interactions are broken but the website is up, admin operations can continue uninterrupted.
-
----
-
-## P3: ForgeLens Offline
-
-Symptoms: Screenshots uploading, no `pending_stat_records` being created.
-
-Impact: Stats not extracted. Match approval workflow is unaffected.
-
-Steps:
-
-1. Check ForgeLens process / deployment status
-2. Review ForgeLens error logs for OCR failures
-3. Check Supabase connectivity from ForgeLens
-
-Recovery:
-- ForgeLens retry queue will process backed-up screenshots on restart
-- If screenshots have expired from Discord CDN, check Supabase Storage for archived copies
-- If no archive exists, admins will need to re-upload or manually enter stats
+`sal-site` is the separate web/control-center application. Use its available admin tools when Discord interactions are broken.
 
 ---
 
-## P4: Supabase Degraded
+## P1: Supabase Degraded
 
-Full platform halt. Both bot and website depend on Supabase.
+Full platform halt. Both salbot and `sal-site` depend on Supabase.
 
 Steps:
 
@@ -85,22 +65,11 @@ Recovery:
 
 ---
 
-## Manual Stat Entry
-
-If ForgeLens is offline and admins need to enter stats manually:
-
-1. Open website admin panel → Match → Stat Entry
-2. For each player in each game, enter stats manually
-3. Stats submitted via manual entry create `pending_stat_records` with `source = 'manual'` and `confidence = 1.0`
-4. Proceed through normal approval flow
-
----
-
 ## Post-Incident
 
-After any P1 or P2 incident:
+After any P1, P2, or P3 incident:
 
 1. Write a brief incident note (what happened, what was done, any data inconsistencies)
 2. Check `pending_actions` for any stuck in `pending` state that need manual review
 3. Check `audit_logs` for any gap in the timeline during the incident window
-4. If any match mutations happened outside the normal pipeline during the incident, enter correction audit log entries via admin panel
+4. If any match mutations happened outside the normal pipeline during the incident, enter correction audit log entries through `sal-site`

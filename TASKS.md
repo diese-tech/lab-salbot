@@ -79,8 +79,8 @@ Completed operations foundation now includes the Operations Engine, `/division-r
 
 ## Future Work
 
-- [ ] Website admin panel (Phase 3)
-- [ ] ForgeLens OCR service (Phase 4)
+- [ ] Additional `sal-site` admin workflows (Phase 3; separate repository)
+- [ ] ForgeLens OCR runtime (Phase 4; future design only)
 - [ ] Standings calculation (Phase 5)
 - [ ] Player/team pages (Phase 5)
 
@@ -117,7 +117,7 @@ None currently.
 
 | Task | Reason Deferred |
 |------|----------------|
-| Website admin panel | Phase 3 — Discord approval sufficient for MVP |
+| Additional `sal-site` admin workflows | Phase 3 — Discord approval sufficient for MVP |
 | ForgeLens OCR | Phase 4 — not blocking match operations |
 | Standings display | Phase 5 — depends on confirmed result pipeline |
 | OCR auto-approval | Requires calibration data + new ADR |

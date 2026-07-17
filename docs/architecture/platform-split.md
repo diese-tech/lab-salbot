@@ -1,6 +1,6 @@
 # Platform Split
 
-This document defines the precise boundary of responsibility for each platform component. When a proposed feature is ambiguous, use this document to determine where it belongs.
+This document defines the precise boundary of responsibility for each platform component. The website is the separate [`diese-tech/sal-site`](https://github.com/diese-tech/sal-site) application. ForgeLens sections are future Phase 4 design; no ForgeLens runtime is currently deployed.
 
 ---
 
@@ -10,8 +10,8 @@ For any new feature, ask:
 
 1. Does it store or modify authoritative state? → **Supabase**
 2. Does it need fast captain/admin interaction? → **Discord Bot**
-3. Does it require detailed editing, history, or correction? → **Website**
-4. Does it process image data to extract stats? → **ForgeLens**
+3. Does it require detailed editing, history, or correction? → **`sal-site`**
+4. Does it process image data to extract stats? → **Future ForgeLens design**
 
 ---
 
@@ -41,7 +41,7 @@ For any new feature, ask:
 
 ---
 
-## Website — Allowed
+## `sal-site` — Allowed
 
 - Full admin review queue with filters and pagination
 - Complex match corrections (score edits, result relinking)
@@ -52,14 +52,14 @@ For any new feature, ask:
 - Admin override of any entity
 - Download/export of evidence archives
 
-## Website — NOT Allowed
+## `sal-site` — NOT Allowed
 
 - Being the only place an admin can perform urgent actions (Discord approval must remain functional)
 - Bypassing `audit_logs` on any mutation
 
 ---
 
-## ForgeLens — Allowed
+## Future ForgeLens — Allowed
 
 - Watching proof thread screenshot uploads (via webhook or polling)
 - OCR processing of screenshot images
@@ -68,7 +68,7 @@ For any new feature, ask:
 - Creating `pending_stat_records`
 - Triggering admin notification on new pending stat records
 
-## ForgeLens — NOT Allowed
+## Future ForgeLens — NOT Allowed
 
 - Writing directly to `player_stats`
 - Approving its own extractions
@@ -90,15 +90,15 @@ Being used directly by the Discord bot for complex business logic without a stru
 
 **Q: Should the bot perform match validation (e.g., check if a score is plausible)?**
 
-A: Light validation in the bot is fine (e.g., score format). Business validation (e.g., is this score consistent with this division's rules) should live in `packages/shared` so both bot and website enforce the same rules.
+A: Light validation in the bot is fine (e.g., score format). Business validation (e.g., is this score consistent with this division's rules) should use a shared database contract so the bot and `sal-site` enforce the same rules.
 
-**Q: Should the website have its own approval buttons?**
+**Q: Should `sal-site` have its own approval buttons?**
 
-A: Yes. The website approval actions go through the same `pending_actions` mutation path as Discord button presses. The pipeline is shared.
+A: Yes. `sal-site` approval actions go through the same `pending_actions` mutation path as Discord button presses. The pipeline is shared.
 
 **Q: What if Discord goes down?**
 
-A: All state is in Supabase. The website remains fully operational. The website admin panel becomes the fallback approval surface.
+A: All state is in Supabase. `sal-site` remains the web/control-center surface when Discord is unavailable.
 
 **Q: Why can `/division-sync` mutate without a `pending_action`?**
 

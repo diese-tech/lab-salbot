@@ -8,12 +8,12 @@ Read this before implementing anything.
 
 A competition operations platform for the SAL league.
 
-It is not only a Discord bot project. The Discord bot is one component of four. The system's job is:
+This repository ships the Discord workflow application and its shared packages. The wider platform also uses the separate `diese-tech/sal-site` web application; ForgeLens remains future design. The system's job is:
 
 - structured match result intake
 - admin approval pipelines
 - compliance-grade evidence collection
-- OCR-assisted stat extraction
+- future OCR-assisted stat extraction design
 - audit-logged state management
 - admin identity and role operations
 
@@ -66,7 +66,7 @@ Corrections are new rows, not edits.
 
 ### OCR Never Auto-Approves
 
-ForgeLens creates `pending_stat_records`.
+ForgeLens is a future Phase 4 design and is not deployed. If implemented, it creates `pending_stat_records`.
 
 It does not write to `player_stats` directly.
 
@@ -100,7 +100,7 @@ Do not:
 - Introduce in-memory state as a substitute for Supabase reads
 - Skip `audit_logs` on any mutation to match-related tables
 - Skip `audit_logs` on any player identity or division role mapping mutation
-- Allow ForgeLens to write directly to `player_stats`
+- Allow a future ForgeLens implementation to write directly to `player_stats`
 - Create duplicate approval systems; use `pending_actions`
 - Add error handling for scenarios that cannot happen
 - Write clever abstractions without clear justification

@@ -111,9 +111,9 @@ No mutation is executed on denial.
 
 ---
 
-## Website Approval
+## `sal-site` Approval
 
-The website admin panel can also process approvals. The workflow is identical to Discord button presses — it goes through the same `pending_actions` mutation path. The website is not a shortcut around the pipeline.
+The separately maintained [`sal-site`](https://github.com/diese-tech/sal-site) application can also process approvals. Its workflow uses the same `pending_actions` mutation path as Discord button presses; it is not a shortcut around the pipeline.
 
 ---
 

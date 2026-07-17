@@ -1,6 +1,8 @@
 # Confidence Scoring
 
-Confidence scoring is how ForgeLens signals to admins how much they should trust an extracted stat record.
+> **Status:** Future Phase 4 design specification. ForgeLens is not implemented or deployed.
+
+Confidence scoring is the proposed way ForgeLens would signal how much admins should trust an extracted stat record.
 
 ---
 
