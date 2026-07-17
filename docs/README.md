@@ -60,6 +60,7 @@ New ADRs: copy [`adrs/template.md`](adrs/template.md).
 ## Deployment
 
 - [`deployment/discord.md`](deployment/discord.md) - Discord application, intents, permissions, and command registration
+- [`deployment/railway.md`](deployment/railway.md) - production container, Railway singleton settings, and deployment verification
 - [`deployment/supabase.md`](deployment/supabase.md) - database and storage
 
 The web/control-center deployment belongs to [`diese-tech/sal-site`](https://github.com/diese-tech/sal-site).

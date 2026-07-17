@@ -1,0 +1,16 @@
+.git
+.github
+.claude
+.turbo
+**/.turbo
+**/node_modules
+**/dist
+.env
+.env.*
+*.log
+
+# The production image is built only from workspace source and manifests.
+archive
+database
+docs
+*.md

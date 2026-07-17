@@ -184,6 +184,7 @@ Current operations docs:
 
 - [`docs/architecture/operations.md`](docs/architecture/operations.md) - reusable bot operations engine
 - [`docs/deployment/discord.md`](docs/deployment/discord.md) - Discord setup and command registration
+- [`docs/deployment/railway.md`](docs/deployment/railway.md) - production container and Railway deployment contract
 - [`docs/architecture/overview.md`](docs/architecture/overview.md) — system design
 - [`docs/onboarding/getting-started.md`](docs/onboarding/getting-started.md) — contributor setup
 - [`docs/workflows/discord-workflows.md`](docs/workflows/discord-workflows.md) — captain and admin workflows
