@@ -22,7 +22,7 @@ If you are adding a new feature that touches the approval pipeline or audit logs
 See [`local-development.md`](local-development.md) for the full setup walkthrough.
 
 Prerequisites:
-- Node.js 20+
+- Node.js 24 LTS
 - pnpm 9+
 - Docker (for local Supabase)
 - Supabase CLI
