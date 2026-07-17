@@ -1,8 +1,8 @@
-# SAL Platform Production Readiness Audit
+# Historical SAL Platform Production Readiness Audit
 
 **Date:** 2026-07-14
 **Scope:** `diese-tech/sal-site` @ `7679160` and `diese-tech/lab-salbot` @ `18a622a`, plus the shared production Supabase project (read-only inspection).
-**Status: This is the authoritative audit source for the SAL platform.** It supersedes all prior audit documents (sal-site's 2026-05-23 audits are archived under `docs/archive/`). This document is maintained identically in both repositories — update both copies together.
+**Status:** Historical snapshot, superseded for this repository by [`docs/audit-status.md`](audit-status.md). The evidence and recommendations below are preserved as recorded on 2026-07-14; they are not the current implementation ledger and this copy is not maintained in lockstep with another repository.
 
 Findings are tracked as GitHub issues in each repository; every issue references its finding ID (F-xx) below.
 

@@ -1,44 +1,28 @@
 # Supabase Deployment
 
+[`diese-tech/sal-database`](https://github.com/diese-tech/sal-database) is the sole owner of active Supabase migrations, generated types, schema releases, drift detection, and production database pushes. SALbot is a contract consumer. This repository must not push schema changes to the shared project.
+
 ---
 
 ## Project Setup
 
-1. Create a Supabase project at supabase.com
-2. Note the project URL and API keys
-3. Add keys to `.env.local` (development) and deployment environment variables (production)
+Follow the canonical repository's local database and restore runbooks. Add the resulting local project URL and service-role key to SALbot's `.env.local`. Production database credentials belong only in the protected database deployment environment; SALbot needs its runtime URL and service-role key, not schema-push authority.
 
 ---
 
-## Running Migrations
+## Migration Ownership
 
-Development (local):
+The SQL under `database/migrations/` records SALbot's pre-contract history. Do not run it as an active sequence against local, staging, or production databases, and do not add new production migrations here.
 
-```bash
-supabase db push
-```
-
-Production:
-
-```bash
-supabase db push --db-url $PRODUCTION_DB_URL
-```
-
-Migrations are in `database/migrations/`. They run in filename order. Do not rename migration files after they have been applied to any environment.
-
-The division sync workflow requires the `division_role_mappings` migration. This table stores Discord role IDs selected by admins from `/division-role-config`. (Applied to the shared production project on 2026-07-13 — it had been missing there, which silently broke `/division-role-config` and the role-sync half of `/division-sync`.)
+Open an isolated issue and PR in `diese-tech/sal-database` for every schema change. Its protected workflow owns local reset, lint, migration planning, authenticated production push, ledger parity, schema assertions, generated types, and the immutable contract release. The recovery drill in [`sal-site#156`](https://github.com/diese-tech/sal-site/issues/156) must pass before initial baseline adoption.
 
 ---
 
-## Generating TypeScript Types
+## Consuming Generated Types
 
-After any schema change, regenerate types if this checkout is configured to commit generated Supabase types:
+SALbot will vendor the generated `Database` type under `packages/db/src/types/` and pin the exact database release, commit, migration head, and type hash in its contract lock. Consumer adoption is tracked in [lab-salbot#41](https://github.com/diese-tech/lab-salbot/issues/41); at the reviewed commit, the vendored type and lock are not yet present.
 
-```bash
-pnpm --filter @salbot/db generate
-```
-
-This checkout currently uses typed query helpers in `packages/db/src/queries/`; it does not currently commit a generated `packages/db/src/types/database.types.ts` file. If generated types are added later, commit them with the schema change.
+Do not regenerate production contract types independently in this repository. Use the contract synchronization command introduced by #41, then let CI verify the vendored hash against the exact `sal-database` commit.
 
 ---
 
@@ -68,12 +52,10 @@ Row-Level Security must be configured for all tables. Key policies:
 - `pending_actions`: READ for authenticated users; WRITE via service role only
 - `player_stats`: READ for public; WRITE via service role only
 
-There is not currently a committed `infra/supabase/` policy directory in this checkout. If SQL policy files are added later, keep them with the migration or introduce a documented policy directory in the same change.
+RLS and storage policy DDL belongs in `diese-tech/sal-database` with the migration and database assertions. This repository documents the access SALbot requires but does not own those policies.
 
 ---
 
 ## Backups
 
-Supabase managed hosting includes daily backups on paid plans.
-
-For compliance purposes, consider exporting `audit_logs` and `evidence` storage to cold storage (e.g., S3) at end of each season.
+Backup retention, PITR availability, and restoration are unverified until the scratch-project drill in [`sal-site#156`](https://github.com/diese-tech/sal-site/issues/156) is complete. Do not infer recoverability from a plan name or dashboard setting. Database baseline adoption stops if the restored data or schema is incomplete or inconsistent.

@@ -1,5 +1,7 @@
 # ROADMAP.md — SAL Operations Platform
 
+> **Historical planning snapshot.** The current remediation sequence is tracked through [`docs/audit-status.md`](docs/audit-status.md) and its linked GitHub issues. The checkboxes below are preserved for context and are not the current implementation ledger.
+
 This is not a commitment list.
 
 This is a planning tool for deciding what to build next, in what order, and why.

@@ -1,5 +1,7 @@
 # Implementation Roadmap
 
+> **Historical planning snapshot.** Current SALbot work is tracked in [`audit-status.md`](audit-status.md) and its linked GitHub issues. The checkboxes below are preserved for context and are not a second implementation ledger.
+
 Phased plan from scaffold to production-ready platform.
 
 The active workspace contains only `apps/bot`, `packages/db`, and `packages/shared`. The web/control center is [`diese-tech/sal-site`](https://github.com/diese-tech/sal-site). ForgeLens remains future design and has no runtime package or deployment.

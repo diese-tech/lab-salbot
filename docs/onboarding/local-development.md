@@ -2,6 +2,8 @@
 
 Step-by-step setup for running the active salbot workspace locally.
 
+Database ownership is external to this repository. Use a sibling [`diese-tech/sal-database`](https://github.com/diese-tech/sal-database) checkout for the pinned Supabase CLI, active migrations, reset, seed, and generated contract types. SQL under this repository's `database/migrations/` directory is pre-contract history and must not be treated as an active sequence.
+
 ---
 
 ## Prerequisites
@@ -45,13 +47,17 @@ Edit `.env.local` with:
 
 ---
 
-## 3. Start Local Supabase
+## 3. Start the Canonical Local Database
 
 ```bash
-supabase start
+cd ../sal-database
+npm ci
+npx supabase start
+npx supabase db reset
+cd ../lab-salbot
 ```
 
-This starts a local Supabase stack (PostgreSQL, Auth, Storage, Studio) via Docker.
+This starts the local Supabase stack from the canonical repository and rebuilds it from that repository's single active migration sequence and deterministic seed.
 
 On first run, it will print your local credentials:
 
@@ -67,29 +73,15 @@ Copy `API URL`, `anon key`, and `service_role key` into `.env.local`.
 
 ---
 
-## 4. Run Migrations
+## 4. Verify the Database Contract
 
-```bash
-supabase db push
-```
-
-This applies all migrations from `database/migrations/` to your local database.
-
-Seed development data by applying the SQL seed file to your local database. There is not currently a root `db:seed` script.
-
-```bash
-psql "$DB_URL" -f database/seeds/001_development.sql
-```
+Run the `sal-database` repository's documented contract checks before starting SALbot. Do not run `supabase db push` from this checkout. A local reset is sufficient for application development; production pushes are manual, protected operations owned by `sal-database`.
 
 ---
 
-## 5. Generate TypeScript Types
+## 5. Synchronize TypeScript Types
 
-```bash
-pnpm --filter @salbot/db generate
-```
-
-If generated Supabase types are introduced, this regenerates them from your local schema. This checkout currently relies on typed query helpers rather than a committed generated types file.
+The database contract synchronization command and vendored generated type are tracked in [lab-salbot#41](https://github.com/diese-tech/lab-salbot/issues/41). Once available, use that command to copy the type from the exact locked `sal-database` release and verify its hash. Do not generate an unpinned production contract independently in this repository.
 
 ---
 
@@ -122,22 +114,13 @@ ForgeLens is a future Phase 4 design. It has no package, process, or local-devel
 ### Reset local database
 
 ```bash
-supabase db reset
-psql "$DB_URL" -f database/seeds/001_development.sql
+cd ../sal-database
+npx supabase db reset
 ```
 
 ### Add a new migration
 
-```bash
-supabase migration new your_migration_name
-```
-
-Edit the generated file in `database/migrations/`. Then:
-
-```bash
-supabase db push
-pnpm --filter @salbot/db generate
-```
+Open an isolated issue and PR in [`diese-tech/sal-database`](https://github.com/diese-tech/sal-database), then follow its baseline/deployment and contract-release runbooks. Do not add the migration to `lab-salbot`.
 
 ### View local Supabase Studio
 
@@ -153,7 +136,7 @@ Run `pnpm --filter @salbot/bot deploy:commands` after any command registration c
 
 **Types out of sync**
 
-Run `pnpm --filter @salbot/db generate` after any schema changes.
+Run the contract synchronization command introduced by [#41](https://github.com/diese-tech/lab-salbot/issues/41) and verify the pinned release, commit, migration head, and type hash.
 
 **Supabase won't start**
 

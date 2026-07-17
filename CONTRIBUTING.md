@@ -17,13 +17,14 @@ This is an operations-critical platform. Match results, standings, and complianc
 
 ## Branch Strategy
 
+This repository uses trunk-based development. Branch from `main`, keep the branch short-lived, and open a pull request back to `main`. There is no `develop` branch.
+
 | Branch | Purpose |
 |--------|---------|
-| `main` | Production-ready. Protected. |
-| `develop` | Integration branch. Feature branches merge here first. |
-| `feature/*` | New features. Branch from `develop`. |
-| `fix/*` | Bug fixes. Branch from `develop` (or `main` for hotfixes). |
-| `hotfix/*` | Critical production fixes. Branch from `main`. |
+| `main` | Protected integration and production branch. |
+| `feature/*` | New feature branch created from `main`. |
+| `fix/*` | Bug-fix branch created from `main`. |
+| `hotfix/*` | Urgent production fix created from `main`. |
 
 ---
 
@@ -40,17 +41,20 @@ pnpm install
 # Copy environment template
 cp .env.example .env.local
 
-# Start local Supabase
-supabase start
-
-# Run migrations
-supabase db push
+# Start the canonical local database from a sibling checkout
+cd ../sal-database
+npm ci
+npx supabase start
+npx supabase db reset
+cd ../lab-salbot
 
 # Start the bot in development mode
 pnpm --filter @salbot/bot dev
 ```
 
 The web/control-center application is maintained separately in [`diese-tech/sal-site`](https://github.com/diese-tech/sal-site). ForgeLens is a future design and has no runtime package in this workspace.
+
+[`diese-tech/sal-database`](https://github.com/diese-tech/sal-database) is the sole owner of active Supabase migrations, generated types, schema releases, and database pushes. The SQL under this repository's `database/migrations/` directory is pre-contract history. Make schema changes in `sal-database` through an isolated issue and PR; do not push the historical SALbot sequence to the shared project.
 
 ---
 
@@ -66,14 +70,14 @@ Format: `type(scope): description`
 | `docs` | Documentation only |
 | `chore` | Build, config, tooling |
 | `test` | Tests only |
-| `migration` | Database migration |
+| `contract` | Consumer change for a released database contract |
 
 Examples:
 
 ```
 feat(bot): add /report-result command with proof thread creation
 fix(bot): prevent duplicate pending_actions on command retry
-migration: add confidence_score to pending_stat_records
+contract(db): sync generated types for db-v1.1.0
 docs(adrs): add ADR-003 OCR no-auto-approve
 ```
 
@@ -87,6 +91,7 @@ All PRs must:
 - [ ] Include test coverage for new approval paths
 - [ ] Not touch `audit_logs` schema without an ADR
 - [ ] Not introduce a command that mutates match state without going through `pending_actions`
+- [ ] Keep schema DDL in a separate `diese-tech/sal-database` issue and PR
 - [ ] Pass CI (lint, typecheck, tests)
 
 ---
