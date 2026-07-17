@@ -8,7 +8,7 @@ Step-by-step setup for running the active salbot workspace locally.
 
 | Tool | Version | Purpose |
 |------|---------|---------|
-| Node.js | 20+ | Runtime |
+| Node.js | 24 LTS | Runtime |
 | pnpm | 9+ | Package manager |
 | Docker | 24+ | Local Supabase |
 | Supabase CLI | Latest | Local DB management |
