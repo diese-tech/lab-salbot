@@ -31,7 +31,9 @@
 - [`workflows/proof-threads.md`](workflows/proof-threads.md) - proof thread lifecycle
 - [`workflows/approval-pipeline.md`](workflows/approval-pipeline.md) - shared approval infrastructure
 
-## OCR / ForgeLens
+## Future OCR / ForgeLens Design
+
+These documents specify Phase 4 constraints. ForgeLens is not implemented or deployed.
 
 - [`ocr/forgelens-integration.md`](ocr/forgelens-integration.md) - ingestion, pipeline, output
 - [`ocr/confidence-scoring.md`](ocr/confidence-scoring.md) - scoring model and routing
@@ -58,5 +60,6 @@ New ADRs: copy [`adrs/template.md`](adrs/template.md).
 ## Deployment
 
 - [`deployment/discord.md`](deployment/discord.md) - Discord application, intents, permissions, and command registration
-- [`deployment/vercel.md`](deployment/vercel.md) - web panel deployment
 - [`deployment/supabase.md`](deployment/supabase.md) - database and storage
+
+The web/control-center deployment belongs to [`diese-tech/sal-site`](https://github.com/diese-tech/sal-site).

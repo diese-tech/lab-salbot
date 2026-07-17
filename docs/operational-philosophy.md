@@ -140,7 +140,7 @@ When a simple approach works, use it. The league needs reliability, not elegance
 Mistakes happen. A captain submits the wrong score. An OCR record has the wrong player name. An admin accidentally approves a denial.
 
 The system handles this by:
-- Making corrections accessible in the website admin panel
+- Making corrections accessible through `sal-site`
 - Requiring every correction to write an audit log entry
 - Preserving original records when corrections are made
 - Never deleting history

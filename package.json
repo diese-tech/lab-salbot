@@ -2,9 +2,9 @@
   "name": "salbot",
   "private": true,
   "workspaces": [
-    "apps/*",
-    "packages/*",
-    "services/*"
+    "apps/bot",
+    "packages/db",
+    "packages/shared"
   ],
   "scripts": {
     "build": "turbo build",

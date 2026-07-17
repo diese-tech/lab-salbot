@@ -61,9 +61,11 @@ Only use this if a score was approved incorrectly.
 
 ---
 
-## Linking a Player to an OCR Record
+## Future Phase 4: Linking a Player to an OCR Record
 
-When ForgeLens extracts stats but cannot match the in-game name to a player:
+> **Status:** Design reference only. ForgeLens and its OCR review workflow are not implemented or deployed.
+
+If a future ForgeLens implementation extracts stats but cannot match the in-game name to a player:
 
 1. Navigate to Admin → Stats → Pending Review
 2. Filter by `player_id IS NULL`
@@ -134,9 +136,9 @@ If the token is expired or belongs to a different admin, run preview again.
 
 ---
 
-## Manually Entering Stats
+## Future Phase 4: Manually Entering Stats
 
-When a screenshot is unreadable or ForgeLens has failed:
+When the future OCR/stat-review workflow exists and a screenshot is unreadable:
 
 1. Navigate to Admin → Matches → [Match ID] → Stat Entry
 2. Select the player

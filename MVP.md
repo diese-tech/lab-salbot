@@ -79,7 +79,7 @@ This is the loop the MVP must complete reliably.
 
 | Feature | Reason Excluded |
 |---------|----------------|
-| Website admin panel | Discord approval is sufficient for MVP operations |
+| Additional `sal-site` admin workflows | Discord approval is sufficient for MVP operations |
 | ForgeLens OCR | Stats can be entered manually at MVP scale |
 | Player stats display | Depends on OCR pipeline |
 | Standings calculation | Depends on confirmed match results pipeline |
@@ -121,11 +121,11 @@ At the end of a match week, the audit log is a complete, attributable record of 
 
 | Risk | Mitigation |
 |------|-----------|
-| Bot offline during active match | All state in Supabase; website admin panel is fallback |
+| Bot offline during active match | All state is in Supabase; use the available `sal-site` admin tools as fallback |
 | Discord CDN URL expiration for screenshots | Supabase Storage archival on upload |
 | Race condition on double-approval | `claimPendingActionForApproval` uses atomic WHERE status='pending' |
 | Captain adopts scanning instead of commands | Onboarding guide + bot prompts to use commands |
-| Admin review backlog during peak weeks | Admin panel (Phase 3) adds filtering and batch actions |
+| Admin review backlog during peak weeks | Additional `sal-site` tooling can add filtering and batch actions |
 
 ---
 

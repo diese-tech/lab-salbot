@@ -2,6 +2,8 @@
 
 Phased plan from scaffold to production-ready platform.
 
+The active workspace contains only `apps/bot`, `packages/db`, and `packages/shared`. The web/control center is [`diese-tech/sal-site`](https://github.com/diese-tech/sal-site). ForgeLens remains future design and has no runtime package or deployment.
+
 ---
 
 ## Phase 0: Foundation
@@ -33,7 +35,7 @@ The captain match approval pipeline remains the main MVP focus.
 
 ## Phase 1: Bot Core — Approval Pipeline
 
-**Goal:** Working approval pipeline with a single command. No OCR, no website yet.
+**Goal:** Working approval pipeline with a single command. No OCR dependency.
 
 Scope:
 - Supabase client + `packages/db` query helpers
@@ -72,32 +74,36 @@ Scope:
 
 ---
 
-## Phase 3: Website Admin Panel
+## Phase 3: `sal-site` Web Control Center
 
-**Goal:** Website becomes a functional alternative to Discord triage.
+**Repository:** [`diese-tech/sal-site`](https://github.com/diese-tech/sal-site), maintained and deployed separately.
+
+**Goal:** Continue making `sal-site` a functional alternative to Discord triage.
 
 Scope:
-- Next.js project scaffold with Supabase auth
+- Shared pending-action contract aligned with salbot
 - Admin review queue (list, filter, paginate)
 - Pending action detail view with approve/deny/needs-info
 - Match detail view with full audit history
 - Basic match correction UI (score edit, winner change)
 
-**Done when:** An admin can process any pending action from the website without touching Discord.
+**Done when:** An admin can process any pending action from `sal-site` without touching Discord.
 
 ---
 
 ## Phase 4: ForgeLens Integration
 
+**Status:** Future design only. No ForgeLens runtime package or deployment exists.
+
 **Goal:** Screenshots are OCR-processed and stats appear in admin review.
 
 Scope:
-- ForgeLens service scaffold
+- Approved implementation boundary and a deliberately created runtime package
 - Webhook receiver from bot
 - OCR pipeline (initial implementation; Tesseract or cloud provider)
 - `pending_stat_records` creation
 - Confidence scoring (initial heuristic model)
-- Admin stat review UI in website
+- Admin stat review UI in `sal-site`
 - Player name linking UI
 - Stat approval → `player_stats` write
 - Audit log for stat approvals
@@ -112,11 +118,11 @@ Scope:
 
 Scope:
 - Standings calculation from approved match results
-- Standings display on website (per division)
+- Standings display in `sal-site` (per division)
 - Player profile pages (match history, stat averages)
 - Team pages (roster, standings, results)
 
-**Done when:** The website shows accurate, current standings and player stats derived entirely from approved records in Supabase.
+**Done when:** `sal-site` shows accurate, current standings and player stats derived entirely from approved records in Supabase.
 
 ---
 
@@ -151,4 +157,4 @@ The MVP is Phase 1 + Phase 2. The core value proposition is:
 
 > Captains submit structured match results. Admins approve them. Supabase records them. Every action is auditable.
 
-OCR, standings, and the website are force multipliers — not prerequisites for league operations.
+OCR and additional `sal-site` workflows are force multipliers — not prerequisites for league operations.

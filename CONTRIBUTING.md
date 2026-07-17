@@ -48,10 +48,9 @@ supabase db push
 
 # Start the bot in development mode
 pnpm --filter @salbot/bot dev
-
-# Start the web panel
-pnpm --filter @salbot/web dev
 ```
+
+The web/control-center application is maintained separately in [`diese-tech/sal-site`](https://github.com/diese-tech/sal-site). ForgeLens is a future design and has no runtime package in this workspace.
 
 ---
 

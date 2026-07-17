@@ -1,6 +1,8 @@
 # ForgeLens Integration
 
-ForgeLens is the OCR/stat extraction service. It watches proof threads, processes screenshots, and generates pending stat records for admin review.
+> **Status:** Future Phase 4 design specification. ForgeLens has no runtime package or deployment today. All behavior below is proposed, not operational.
+
+ForgeLens would be the OCR/stat extraction service. It would consume proof-thread screenshots and generate pending stat records for admin review.
 
 ---
 
@@ -40,7 +42,7 @@ ForgeLens can receive this via:
 - Supabase realtime subscription on an `evidence_uploads` table
 - Message queue (future)
 
-The preferred approach for MVP is a direct webhook call from the bot to ForgeLens.
+The proposed initial approach is a direct webhook call from the bot to ForgeLens. It must be reviewed again when Phase 4 begins.
 
 ---
 

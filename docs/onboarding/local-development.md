@@ -1,6 +1,6 @@
 # Local Development
 
-Step-by-step setup for running the full platform stack locally.
+Step-by-step setup for running the active salbot workspace locally.
 
 ---
 
@@ -109,23 +109,11 @@ Discord setup also requires the Server Members intent and Manage Roles permissio
 
 ---
 
-## 7. Start the Web Panel
+## External and Future Components
 
-```bash
-pnpm --filter @salbot/web dev
-```
+The current web/control-center application is maintained in [`diese-tech/sal-site`](https://github.com/diese-tech/sal-site). Follow that repository's setup guide when developing the website alongside the bot.
 
-Web panel runs at `http://localhost:3000`.
-
----
-
-## 8. Start ForgeLens (Optional)
-
-ForgeLens is only required if you're working on OCR features:
-
-```bash
-pnpm --filter @salbot/forgelens dev
-```
+ForgeLens is a future Phase 4 design. It has no package, process, or local-development command in this workspace.
 
 ---
 

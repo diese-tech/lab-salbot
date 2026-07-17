@@ -28,7 +28,7 @@ A dedicated proof thread is created per match report. Screenshots are uploaded t
 - **Timing** — captains may not have all screenshots immediately. Proof threads allow uploading over minutes or hours after submitting the result.
 - **Dual-captain participation** — both Team A and Team B captains should be able to contribute screenshots. A thread is accessible to all participants; a command interaction is not.
 - **Organization** — one thread per match keeps evidence organized and queryable. A general channel becomes unmanageable at scale.
-- **ForgeLens watch surface** — ForgeLens watches specific proof threads rather than scanning all channels, which is more efficient and reliable.
+- **Future ForgeLens watch surface** — a future ForgeLens implementation can watch specific proof threads rather than scanning all channels, which is more efficient and reliable.
 - **Compliance** — the thread URL is stored in `matches.proof_thread_url` and archived to Supabase Storage. This creates a durable evidence link that survives Discord CDN URL expiration.
 
 ---
@@ -40,7 +40,7 @@ A dedicated proof thread is created per match report. Screenshots are uploaded t
 - No screenshot upload limit per match
 - Captains can upload after the fact
 - Both captains can contribute
-- ForgeLens has a clear watch surface
+- A future ForgeLens implementation has a clear watch surface
 - Thread URL is a permanent compliance reference
 
 ### Negative

@@ -90,7 +90,7 @@ VALUES ('stat_approved', 'player_stat', $new_stat_id, ...)
 
 ## Admin Override Pattern
 
-The website admin panel supports direct overrides (e.g., correcting a score after the fact). These are allowed but must:
+The separate `sal-site` application supports direct overrides (e.g., correcting a score after the fact). These are allowed but must:
 
 1. Still write to `audit_logs` with `action_type = 'admin_override'`
 2. Include a `note` explaining the reason
