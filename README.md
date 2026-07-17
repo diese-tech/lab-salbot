@@ -4,6 +4,16 @@
 
 A lightweight competition operations platform for the SAL league. This is not just a Discord bot — Discord is the workflow intake layer. The current platform combines this repository's bot with Supabase and the separately maintained [`sal-site`](https://github.com/diese-tech/sal-site) web application. ForgeLens OCR remains a future design.
 
+## Repository Status
+
+- `apps/bot` is the active application in this repository. At the reviewed commit, its package and the active shared/database packages pass 34 tests in total.
+- [`diese-tech/sal-site`](https://github.com/diese-tech/sal-site) is the separate web/control-center application.
+- ForgeLens is future architecture only; there is no ForgeLens runtime package in this workspace.
+- Railway is the intended bot host. The reproducible container/Railway contract landed in [#50](https://github.com/diese-tech/lab-salbot/pull/50), and [#49](https://github.com/diese-tech/lab-salbot/pull/49) verifies its non-root production image in CI. Readiness and Railway staging proof remain tracked in [#45](https://github.com/diese-tech/lab-salbot/issues/45).
+- [`diese-tech/sal-database`](https://github.com/diese-tech/sal-database) is the designated sole owner of active Supabase migrations, generated types, schema releases, and production pushes. SQL in this repository is pre-contract history.
+
+See [`docs/audit-status.md`](docs/audit-status.md) for current findings and verification evidence.
+
 ---
 
 ## Platform Identity
@@ -32,7 +42,7 @@ ForgeLens is retained as a Phase 4 architecture proposal only. There is no Forge
 
 | Component | Status | Role |
 |-----------|--------|------|
-| **Supabase** | Current | Authoritative state. Owns all entities, relationships, lifecycle, and identifiers. |
+| **Supabase** | Current | Authoritative runtime state; the schema contract release process is owned by [`diese-tech/sal-database`](https://github.com/diese-tech/sal-database). No `db-v1.0.0` release is claimed yet. |
 | **Discord Bot** | Current; this repository | Workflow intake, captain commands, admin operations, public receipts, review cards, and proof threads. |
 | **[`sal-site`](https://github.com/diese-tech/sal-site)** | Current; separate repository | Public website and operational control center. |
 | **ForgeLens** | Future Phase 4 design | Proposed OCR processor for screenshot stat extraction and human-reviewed pending records. |
@@ -151,11 +161,11 @@ salbot/
 ├── apps/
 │   └── bot/              # Discord bot (Discord.js, TypeScript)
 ├── packages/
-│   ├── db/               # Supabase client, generated types, query helpers
+│   ├── db/               # Supabase client and query helpers
 │   └── shared/           # Shared types, constants, utility functions
 ├── docs/                 # Operations docs and future design specifications
 ├── database/
-│   ├── migrations/       # SQL migration files
+│   ├── migrations/       # Pre-contract SQL history; not active ownership
 │   └── seeds/            # Development seed data
 └── .github/
     ├── workflows/        # CI/CD
@@ -201,4 +211,4 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## License
 
-Internal — diese-tech. All rights reserved.
+See [`LICENSE`](LICENSE). This source is publicly viewable but is not open source.

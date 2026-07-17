@@ -1,14 +1,14 @@
 # Database Schema
 
-Supabase is the source of truth. The database is shared with the `sal-draft-league` website.
+Supabase is the runtime source of truth shared by SALbot and `sal-site`.
 
-SALbot does NOT own the full schema. It operates additively on an existing database.
+[`diese-tech/sal-database`](https://github.com/diese-tech/sal-database) is the designated sole owner of active migrations, generated types, schema releases, drift detection, and production database pushes. This document explains the shape SALbot consumes; it does not grant this repository schema ownership. Until the initial contract release is adopted, the definitions below are application expectations rather than proof of released or production schema. SQL retained under `database/migrations/` is pre-contract history and must not be pushed to the shared production project.
 
 ---
 
-## Existing Tables (owned by sal-draft-league)
+## Shared Tables (owned by sal-database)
 
-These tables were created by the sal-draft-league migrations. SALbot reads from them but does not redefine or recreate them.
+These tables are owned by the canonical database contract. SALbot reads from them but does not redefine or recreate them.
 
 ### `divisions`
 
@@ -83,7 +83,7 @@ vod_url         text
 season_id       text REFERENCES seasons(id)
 archived_at     timestamptz
 deletion_scheduled_at timestamptz
--- SALbot-added columns (see migration):
+-- Bot-facing columns (defined by the canonical schema contract):
 winner_org_id       text REFERENCES orgs(id)
 score               text            -- formatted "2-1"
 proof_thread_id     text
@@ -118,9 +118,9 @@ Bot uses this to verify admin identity on button interactions.
 
 ---
 
-## SALbot Tables (added by SALbot migration)
+## Bot-facing operational tables
 
-These tables are created by `database/migrations/20250101000000_initial_schema.sql`.
+These tables must be part of the canonical `sal-database` schema before consumer adoption. The legacy `database/migrations/20250101000000_initial_schema.sql` file is retained only as pre-contract evidence.
 
 ### `pending_actions`
 

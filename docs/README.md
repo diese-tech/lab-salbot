@@ -1,14 +1,15 @@
 # Documentation Index
 
-## Production Audit
+## Audit Status
 
-- [`audit-production-readiness-2026-07-14.md`](audit-production-readiness-2026-07-14.md) - **authoritative platform audit** (findings, launch plan, go/no-go); maintained identically in sal-site
+- [`audit-status.md`](audit-status.md) - current SALbot findings, issue links, verification snapshot, and closure rules
+- [`audit-production-readiness-2026-07-14.md`](audit-production-readiness-2026-07-14.md) - frozen historical platform snapshot; superseded for current status
 
 ## Start Here
 
 - [`onboarding/getting-started.md`](onboarding/getting-started.md) - new contributor orientation
 - [`onboarding/local-development.md`](onboarding/local-development.md) - local setup
-- [`ROADMAP.md`](ROADMAP.md) - phased implementation plan
+- [`ROADMAP.md`](ROADMAP.md) - historical planning snapshot; current work is in `audit-status.md`
 - [`operational-philosophy.md`](operational-philosophy.md) - founding principles
 
 ## Architecture
@@ -60,7 +61,7 @@ New ADRs: copy [`adrs/template.md`](adrs/template.md).
 ## Deployment
 
 - [`deployment/discord.md`](deployment/discord.md) - Discord application, intents, permissions, and command registration
-- [`deployment/railway.md`](deployment/railway.md) - production container, Railway singleton settings, and deployment verification
+- [`deployment/railway.md`](deployment/railway.md) - production container, Railway singleton settings, and deployment-verification runbook
 - [`deployment/supabase.md`](deployment/supabase.md) - database and storage
 
 The web/control-center deployment belongs to [`diese-tech/sal-site`](https://github.com/diese-tech/sal-site).
