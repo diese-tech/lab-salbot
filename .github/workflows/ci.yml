@@ -126,6 +126,24 @@ jobs:
           extra_args: --results=verified,unknown
           version: 3.95.9
 
+  container-build:
+    name: Container Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build production image
+        run: docker build --tag salbot:${{ github.sha }} .
+      - name: Verify non-root production runtime and workspace imports
+        run: |
+          docker run --rm --entrypoint node salbot:${{ github.sha }} -e '
+            if (typeof process.getuid === "function" && process.getuid() === 0) {
+              throw new Error("runtime container is root");
+            }
+            require("@salbot/shared");
+            require("@salbot/db");
+          '
+
   whitespace:
     name: Whitespace
     runs-on: ubuntu-latest
@@ -151,5 +169,4 @@ jobs:
           fi
 
 # Database-contract verification remains gated on #41 and the first released
-# sal-database contract. Container-build verification remains gated on #43 and
-# a committed Dockerfile; neither check can be truthful in this change.
+# sal-database contract.
