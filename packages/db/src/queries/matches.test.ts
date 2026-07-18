@@ -75,10 +75,11 @@ describe("completeMatch status precondition", () => {
 });
 
 describe("getEligibleMatchesForCaptain archived filter", () => {
-  it("excludes site-archived matches even when still 'scheduled'", async () => {
+  it("excludes archived and other-season matches even when still scheduled", async () => {
     const rows: Row[] = [
-      { id: "m-5", status: "scheduled", home_org_id: "org-1", scheduled_date: "2099-01-01", archived_at: null },
-      { id: "m-6", status: "scheduled", home_org_id: "org-1", scheduled_date: "2099-01-01", archived_at: "2026-07-01T00:00:00Z" },
+      { id: "m-5", season_id: "season-current", status: "scheduled", home_org_id: "org-1", scheduled_date: "2099-01-01", archived_at: null },
+      { id: "m-6", season_id: "season-current", status: "scheduled", home_org_id: "org-1", scheduled_date: "2099-01-01", archived_at: "2026-07-01T00:00:00Z" },
+      { id: "m-7", season_id: "season-old", status: "scheduled", home_org_id: "org-1", scheduled_date: "2099-01-01", archived_at: null },
     ];
     const filters: Array<(row: Row) => boolean> = [];
     const builder = {
@@ -93,7 +94,7 @@ describe("getEligibleMatchesForCaptain archived filter", () => {
     };
     const db = { from: () => builder } as never;
 
-    const eligible = await getEligibleMatchesForCaptain(db, "org-1");
+    const eligible = await getEligibleMatchesForCaptain(db, "org-1", "season-current");
 
     expect(eligible.map((row: Row) => row.id)).toEqual(["m-5"]);
   });

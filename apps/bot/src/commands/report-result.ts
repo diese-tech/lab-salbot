@@ -38,7 +38,11 @@ export async function execute(interaction: ChatInputCommandInteraction) {
     return;
   }
 
-  const matches = await getEligibleMatchesForCaptain(db, captain.org_id as string);
+  const matches = await getEligibleMatchesForCaptain(
+    db,
+    captain.org_id as string,
+    captain.season_id as string
+  );
   if (!matches.length) {
     await interaction.reply({ content: 'You have no scheduled matches available to report.', ephemeral: true });
     return;

@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '../client';
 
 export async function getDivisionById(db: SupabaseClient, divisionId: string) {
   const { data, error } = await db

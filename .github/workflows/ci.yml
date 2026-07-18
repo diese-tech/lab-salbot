@@ -10,6 +10,17 @@ permissions:
   contents: read
 
 jobs:
+  database-contract:
+    name: Database Contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - run: node scripts/db-contract.mjs check packages/db/src/types/database.types.ts
+
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -167,6 +178,3 @@ jobs:
           else
             git show --check --format=fuller "$GITHUB_SHA"
           fi
-
-# Database-contract verification remains gated on #41 and the first released
-# sal-database contract.
