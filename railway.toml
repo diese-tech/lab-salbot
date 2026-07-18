@@ -11,8 +11,8 @@ restartPolicyMaxRetries = 10
 
 # SALbot is a singleton Discord gateway consumer. Do not overlap old and new
 # deployments; give the existing SIGTERM handler time to disconnect cleanly.
-overlapSeconds = "0"
-drainingSeconds = "30"
+overlapSeconds = 0
+drainingSeconds = 30
 
 # No healthcheckPath is configured here. Readiness is tracked separately in
 # https://github.com/diese-tech/lab-salbot/issues/45.
