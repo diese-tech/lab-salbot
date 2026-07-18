@@ -1,6 +1,6 @@
 # ForgeLens Integration
 
-> **Status:** Future Phase 4 design specification. ForgeLens has no runtime package or deployment today. All behavior below is proposed, not operational.
+> **Status:** Legacy Phase 4 integration design. No extraction runtime is deployed. ADR-008 supersedes any human-review-only or self-approval prohibition below with a confidence-gated, service-RPC auto-publication path that remains review-flagged.
 
 ForgeLens would be the OCR/stat extraction service. It would consume proof-thread screenshots and generate pending stat records for admin review.
 

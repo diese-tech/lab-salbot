@@ -46,10 +46,12 @@ These documents specify Phase 4 constraints. ForgeLens is not implemented or dep
 |-----|---------|
 | [ADR-001](adrs/ADR-001-supabase-source-of-truth.md) | Supabase as single source of truth |
 | [ADR-002](adrs/ADR-002-commands-primary-workflow.md) | Commands over parsing |
-| [ADR-003](adrs/ADR-003-ocr-no-auto-approve.md) | OCR output never auto-approved |
+| [ADR-003](adrs/ADR-003-ocr-no-auto-approve.md) | OCR output never auto-approved (superseded) |
 | [ADR-004](adrs/ADR-004-evidence-threads.md) | Dedicated proof threads |
 | [ADR-005](adrs/ADR-005-pending-actions.md) | Unified pending_actions pipeline |
 | [ADR-006](adrs/ADR-006-immutable-audit-logs.md) | Immutable audit logs |
+| [ADR-007](adrs/ADR-007-llm-rules-assistant.md) | Advisory LLM rules assistant |
+| [ADR-008](adrs/ADR-008-confidence-gated-stat-auto-publication.md) | Confidence-gated complete-game stat auto-publication |
 
 New ADRs: copy [`adrs/template.md`](adrs/template.md).
 

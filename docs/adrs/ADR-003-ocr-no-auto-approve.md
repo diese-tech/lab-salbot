@@ -2,7 +2,7 @@
 
 > **Implementation status:** Future Phase 4 constraint. ForgeLens is not implemented or deployed.
 
-**Status:** Accepted
+**Status:** Superseded by [ADR-008](ADR-008-confidence-gated-stat-auto-publication.md)
 **Date:** 2025-01-01
 **Deciders:** Platform architecture
 

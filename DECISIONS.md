@@ -108,7 +108,7 @@ See `docs/adrs/ADR-005-pending-actions.md` for full reasoning.
 
 ---
 
-## 2025-01-01 — OCR Never Directly Approves Stats
+## 2025-01-01 — OCR Never Directly Approves Stats (Superseded)
 
 ### Decision
 
@@ -130,6 +130,42 @@ OCR is imperfect. Player name linking is a human problem. Tournament/prizing acc
 - Stat records may lag behind match results by hours
 
 See `docs/adrs/ADR-003-ocr-no-auto-approve.md` for full reasoning.
+
+---
+
+## 2026-07-18 - Confidence-Gated OCR Stats May Publish Before Human Review
+
+### Decision
+
+OCR still never writes directly to official stat tables. A complete game may
+publish immediately through one audited, service-role-only database transaction
+when every required field for every player is above 0.97 and all deterministic
+pairing, identity, aggregate, duplicate, and evidence checks pass.
+
+Auto-published records remain internally flagged until an authorized human
+clears the flag. Any failed gate routes the entire game to manual review.
+
+### Why
+
+Preseason scouting needs trustworthy stats to appear the same or next day.
+Complete scoreboard and match-details pairs provide enough redundant evidence
+to validate a game as a unit, while a non-blocking review flag and immutable
+audit trail preserve human oversight.
+
+### Expected Benefits
+
+- Same-day publication for complete, high-confidence games
+- Manual review focuses on exceptions, flags, and disputes
+- Full model, prompt, evidence, confidence, validation, and audit provenance
+
+### Tradeoffs
+
+- An incorrect extraction may be visible before a human reviews it
+- The database RPC, review-state model, correction flow, and acceptance suite
+  become operationally critical
+
+See `docs/adrs/ADR-008-confidence-gated-stat-auto-publication.md` for the full
+decision and release gates.
 
 ---
 

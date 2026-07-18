@@ -95,9 +95,9 @@ An admin can process any pending action from `sal-site` without touching Discord
 
 ---
 
-## Phase 4 — ForgeLens OCR
+## Phase 4 — OCR-Assisted Scout Extraction
 
-**Status:** Future design only. No ForgeLens runtime package or deployment exists.
+**Status:** Implementation design accepted in ADR-008. No extraction runtime package or deployment exists yet.
 
 **Goal:** Screenshots are processed automatically and stats appear in an admin review queue.
 
@@ -109,6 +109,8 @@ An admin can process any pending action from `sal-site` without touching Discord
 - [ ] Stat extraction and confidence scoring
 - [ ] `pending_stat_records` creation with `confidence` field
 - [ ] Confidence-based routing (standard / flagged / manual queue)
+- [ ] Complete-game auto-publication above the ADR-008 gate
+- [ ] Non-blocking review flag, human unflag, dispute, and correction workflow
 - [ ] Admin stat review UI in `sal-site`
 - [ ] Player name linking UI
 - [ ] Stat approval → `player_stats` write + `audit_log`
@@ -116,7 +118,10 @@ An admin can process any pending action from `sal-site` without touching Discord
 
 ### Done When
 
-A proof thread screenshot produces a `pending_stat_record` an admin can review and approve, producing a `player_stats` row with full audit trail.
+A verified scoreboard and match-details pair produces one complete-game stat
+batch. Games passing every ADR-008 gate publish immediately and remain
+review-flagged; all other games enter manual review. Publication, unflagging,
+disputes, and corrections retain a complete audit trail.
 
 ---
 
@@ -156,7 +161,6 @@ A proof thread screenshot produces a `pending_stat_record` an admin can review a
 
 These are ideas that may never happen. They are listed here to prevent them from invading MVP scope.
 
-- OCR auto-approval for sustained high-accuracy records (requires new ADR)
 - Public API for third-party stats integrations
 - Mobile-optimized captain workflow
 - Multi-season archival and season scaffolding tooling
@@ -173,7 +177,7 @@ These are ideas that may never happen. They are listed here to prevent them from
 | ForgeLens OCR | Phase 4 — not blocking match operations |
 | Standings | Phase 5 — depends on confirmed match pipeline |
 | Public player pages | Phase 5 — depends on approved stats |
-| Auto-approval | Post-Phase 4 — requires calibration data and new ADR |
+| Confidence-gated auto-publication | Planned in Phase 4 under ADR-008; enablement requires calibration and staging evidence |
 
 ---
 
