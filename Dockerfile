@@ -17,8 +17,7 @@ COPY apps/bot/package.json ./apps/bot/package.json
 COPY packages/db/package.json ./packages/db/package.json
 COPY packages/shared/package.json ./packages/shared/package.json
 
-RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-    pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile
 
 FROM dependencies AS build
 
