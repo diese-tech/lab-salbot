@@ -42,7 +42,7 @@ ForgeLens is retained as a Phase 4 architecture proposal only. There is no Forge
 
 | Component | Status | Role |
 |-----------|--------|------|
-| **Supabase** | Current | Authoritative runtime state; the schema contract release process is owned by [`diese-tech/sal-database`](https://github.com/diese-tech/sal-database). No `db-v1.0.0` release is claimed yet. |
+| **Supabase** | Current | Authoritative runtime state; the schema contract release process is owned by [`diese-tech/sal-database`](https://github.com/diese-tech/sal-database). SALbot vendors and verifies immutable `db-v1.2.0` at commit `195a0792a396354d7809d7dcbb85a9cdfd4d8030`. |
 | **Discord Bot** | Current; this repository | Workflow intake, captain commands, admin operations, public receipts, review cards, and proof threads. |
 | **[`sal-site`](https://github.com/diese-tech/sal-site)** | Current; separate repository | Public website and operational control center. |
 | **ForgeLens** | Future Phase 4 design | Proposed OCR processor for screenshot stat extraction and human-reviewed pending records. |

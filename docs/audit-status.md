@@ -4,7 +4,7 @@
 
 **Remediation main:** `56a3d067ba6abfbe80e059a6390ae60e7bfd97c3`
 
-**Last reviewed:** 2026-07-17
+**Last reviewed:** 2026-07-18
 **Scope:** SALbot production engineering, its database contract, and its deployment boundary.
 
 This file is the repository-specific status source for current SALbot findings. The [July 14 platform audit](audit-production-readiness-2026-07-14.md) is a frozen historical snapshot and is not the current implementation ledger.
@@ -43,8 +43,12 @@ command was affected by local process/file-lock behavior.
   full-graph findings.
 
 These results still do not prove Railway staging singleton behavior, `/healthz`,
-clean teardown, database recovery, the future database contract, outbox behavior,
+clean teardown, outbox behavior,
 or a live Discord flow.
+
+- [PR #55](https://github.com/diese-tech/lab-salbot/pull/55) resolves captain
+  permissions and match eligibility through the current season, vendors the
+  generated `db-v1.2.0` types, and adds a hard immutable-contract drift gate.
 
 ## Remediation register
 
@@ -52,8 +56,8 @@ or a live Discord flow.
 |---|---|---|
 | `SAL-SCOPE-01` | Repository scope cleanup landed in #46. | [#38](https://github.com/diese-tech/lab-salbot/issues/38) |
 | `SAL-SEC-01` | Dependency remediation landed in #47 and hard audit gates landed in #49. | [#39](https://github.com/diese-tech/lab-salbot/issues/39) |
-| `SAL-RUNTIME-01` | Node 24, frozen pnpm, and all application/container gates are on `main`; database-contract drift remains recovery-gated. | [#40](https://github.com/diese-tech/lab-salbot/issues/40) |
-| `SAL-DB-01` | Open: vendor generated database types and verify an immutable database contract lock after `db-v1.0.0`. | [#41](https://github.com/diese-tech/lab-salbot/issues/41) |
+| `SAL-RUNTIME-01` | Node 24, frozen pnpm, application/container gates, and the immutable database-contract drift gate are implemented. | [#40](https://github.com/diese-tech/lab-salbot/issues/40), [PR #55](https://github.com/diese-tech/lab-salbot/pull/55) |
+| `SAL-DB-01` | SALbot vendors the generated types and verifies immutable `db-v1.2.0` at commit `195a0792a396354d7809d7dcbb85a9cdfd4d8030`. | [#41](https://github.com/diese-tech/lab-salbot/issues/41), [PR #55](https://github.com/diese-tech/lab-salbot/pull/55) |
 | `SAL-OPS-02` | Open: move Discord projections to the durable, lease-based operation outbox. | [#42](https://github.com/diese-tech/lab-salbot/issues/42) |
 | `SAL-DEPLOY-01` | Container/Railway contract and CI image proof landed in #50/#49; Railway staging acceptance remains open. | [#43](https://github.com/diese-tech/lab-salbot/issues/43) |
 | `SAL-GOV-01` | This repository-specific status, ownership, security, licensing, and update policy is supplied by #48; remote protection is already verified. | [#44](https://github.com/diese-tech/lab-salbot/issues/44) |
@@ -61,11 +65,11 @@ or a live Discord flow.
 
 ## Shared platform gates
 
-- `SAL-OPS-01`: the backup/PITR restore drill is tracked in [`sal-site#156`](https://github.com/diese-tech/sal-site/issues/156). Database consolidation and production schema work stop until the restore is complete and consistent.
-- `SAL-DB-01`: [`diese-tech/sal-database`](https://github.com/diese-tech/sal-database) is the designated sole owner of active Supabase migrations, generated types, schema releases, drift detection, and production database pushes. Initial repository adoption is tracked in [`sal-site#172`](https://github.com/diese-tech/sal-site/issues/172); SALbot consumer adoption is tracked in [#41](https://github.com/diese-tech/lab-salbot/issues/41).
+- `SAL-OPS-01`: the representative scratch restore and data-preservation comparison passed; recurring home-lab backup evidence remains tracked in [`sal-site#156`](https://github.com/diese-tech/sal-site/issues/156).
+- `SAL-DB-01`: [`diese-tech/sal-database`](https://github.com/diese-tech/sal-database) is the sole owner of active Supabase migrations, generated types, releases, drift detection, and production pushes. SALbot pins `db-v1.2.0` through `db-contract.lock.json`.
 - `SAL-OPS-02`: the transactional database RPC and outbox foundation is tracked in [`sal-site#178`](https://github.com/diese-tech/sal-site/issues/178), with the SALbot worker tracked in [#42](https://github.com/diese-tech/lab-salbot/issues/42).
 
-Until the initial database contract release is verified, this repository's `database/migrations/` directory is retained only as pre-contract history. Do not add an active production migration here or push this directory to the shared production project.
+This repository's `database/migrations/` directory is retained only as pre-contract history. Do not add an active production migration here or push this directory to the shared production project.
 
 ## Closure evidence
 
