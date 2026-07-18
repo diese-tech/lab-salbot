@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '../client';
 
 const MATCH_FIELDS = `
   id, week, scheduled_date, scheduled_time, status,
@@ -10,13 +10,18 @@ const MATCH_FIELDS = `
   division:divisions(id, name)
 `;
 
-export async function getEligibleMatchesForCaptain(db: SupabaseClient, orgId: string) {
+export async function getEligibleMatchesForCaptain(
+  db: SupabaseClient,
+  orgId: string,
+  seasonId: string
+) {
   const today = new Date().toISOString().split('T')[0];
 
   const { data, error } = await db
     .from('matches')
     .select(MATCH_FIELDS)
     .or(`home_org_id.eq.${orgId},away_org_id.eq.${orgId}`)
+    .eq('season_id', seasonId)
     .eq('status', 'scheduled')
     .is('archived_at', null)
     .gte('scheduled_date', today)
@@ -110,7 +115,13 @@ export async function setProofThread(
 }
 
 export async function incrementScreenshotCount(db: SupabaseClient, matchId: string) {
-  const { error } = await db.rpc('increment_screenshot_count', { match_id: matchId });
+  // This RPC predates the shared database baseline. Keep the compatibility call
+  // isolated until the atomic approval migration replaces this legacy helper.
+  const legacyRpc = db.rpc as unknown as (
+    fn: string,
+    args: { match_id: string }
+  ) => Promise<{ error: unknown }>;
+  const { error } = await legacyRpc('increment_screenshot_count', { match_id: matchId });
   if (error) {
     // Fallback: manual increment if RPC not available
     const { data: match } = await db

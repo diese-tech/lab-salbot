@@ -1,5 +1,6 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '../client';
 import type { AuditActionType } from '@salbot/shared';
+import { toDatabaseJson } from '../json';
 
 export async function writeAuditLog(
   db: SupabaseClient,
@@ -20,8 +21,8 @@ export async function writeAuditLog(
     entity_id: params.entityId,
     actor_discord_id: params.actorDiscordId,
     pending_action_id: params.pendingActionId ?? null,
-    old_value_json: params.oldValueJson ?? null,
-    new_value_json: params.newValueJson ?? null,
+    old_value_json: params.oldValueJson ? toDatabaseJson(params.oldValueJson) : null,
+    new_value_json: params.newValueJson ? toDatabaseJson(params.newValueJson) : null,
     note: params.note ?? null,
   });
 

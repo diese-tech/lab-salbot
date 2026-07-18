@@ -1,5 +1,6 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '../client';
 import type { PendingActionType } from '@salbot/shared';
+import { toDatabaseJson } from '../json';
 
 export async function createPendingAction(
   db: SupabaseClient,
@@ -18,7 +19,7 @@ export async function createPendingAction(
       requested_by_discord_id: params.requestedByDiscordId,
       match_id: params.matchId ?? null,
       division_id: params.divisionId ?? null,
-      payload_json: params.payloadJson,
+      payload_json: toDatabaseJson(params.payloadJson),
     })
     .select()
     .single();

@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '../client';
 
 export type DivisionRoleMapping = {
   division_id: string;
