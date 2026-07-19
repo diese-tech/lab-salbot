@@ -37,16 +37,21 @@ Discord is a display and intake surface only. Do not treat Discord message histo
 
 ## Architecture Rules
 
-### No Direct Match/Stat Mutations Without pending_actions
+### No Direct Match or Stat Mutations Outside Canonical Workflows
 
-Every match result, reschedule, or stat change must:
+Every match result or reschedule must:
 
 1. Create a `pending_action` record
 2. Go through admin review
 3. Execute the mutation on approval
 4. Write to `audit_logs`
 
-There is no shortcut path for match/stat approval workflows.
+Stat extraction must create canonical stat-review records. A complete game may
+publish before human review only through the confidence-gated,
+service-role-only transaction defined by ADR-008. That path still writes
+immutable audits, uses the durable outbox, is idempotent, and leaves the
+auto-published extraction flagged for human review. The extraction service
+never writes directly to official stat tables.
 
 Admin-only operational setup and identity maintenance is the exception. Commands such as `/division-role-config` and `/division-sync` may mutate `division_role_mappings`, `players.discord_id`, and Discord roles directly after validating `admin_users`. Those mutations must still write `audit_logs` and must not overwrite conflicting identity data automatically.
 
@@ -64,13 +69,17 @@ Never update or delete `audit_logs` rows.
 
 Corrections are new rows, not edits.
 
-### OCR Never Auto-Approves
+### OCR Auto-Publication Is Confidence-Gated and Reviewable
 
-ForgeLens is a future Phase 4 design and is not deployed. If implemented, it creates `pending_stat_records`.
+OCR-assisted extraction creates canonical stat-review records and never writes
+directly to `player_stats`. Under ADR-008, a complete game may publish
+immediately only when every required field for every player is above the 0.97
+threshold and all deterministic evidence, identity, aggregate, duplicate, and
+transactional checks pass. Otherwise the whole game requires human review.
 
-It does not write to `player_stats` directly.
-
-Every stat record requires admin approval.
+Auto-published extractions remain internally flagged until an authorized human
+clears the flag. Publishing, flagging, unflagging, disputing, and correcting are
+all audited.
 
 ## Command Rules
 
@@ -100,7 +109,7 @@ Do not:
 - Introduce in-memory state as a substitute for Supabase reads
 - Skip `audit_logs` on any mutation to match-related tables
 - Skip `audit_logs` on any player identity or division role mapping mutation
-- Allow a future ForgeLens implementation to write directly to `player_stats`
+- Allow an extraction service to write directly to `player_stats`
 - Create duplicate approval systems; use `pending_actions`
 - Add error handling for scenarios that cannot happen
 - Write clever abstractions without clear justification
@@ -132,6 +141,7 @@ See `MVP.md` for scope boundaries.
 4. Does it write to `audit_logs`?
 5. Does it add an approval handler if it adds a new `pending_action` type?
 6. Is the captain workflow using the dropdown pattern?
+7. If stats auto-publish, does the complete game satisfy every ADR-008 gate and remain review-flagged?
 
 If any answer is wrong, fix it before merging.
 

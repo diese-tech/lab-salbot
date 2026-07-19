@@ -36,7 +36,8 @@ Discord ──► salbot ──► Supabase ◄── sal-site
    UI          API        truth
 ```
 
-ForgeLens is retained as a Phase 4 architecture proposal only. There is no ForgeLens runtime package or deployment in the current workspace.
+OCR-assisted scout extraction is an accepted Phase 4 design under ADR-008.
+There is no extraction runtime package or deployment in the current workspace.
 
 ### Component Responsibilities
 
@@ -45,7 +46,7 @@ ForgeLens is retained as a Phase 4 architecture proposal only. There is no Forge
 | **Supabase** | Current | Authoritative runtime state; the schema contract release process is owned by [`diese-tech/sal-database`](https://github.com/diese-tech/sal-database). SALbot vendors and verifies immutable `db-v1.2.0` at commit `195a0792a396354d7809d7dcbb85a9cdfd4d8030`. |
 | **Discord Bot** | Current; this repository | Workflow intake, captain commands, admin operations, public receipts, review cards, and proof threads. |
 | **[`sal-site`](https://github.com/diese-tech/sal-site)** | Current; separate repository | Public website and operational control center. |
-| **ForgeLens** | Future Phase 4 design | Proposed OCR processor for screenshot stat extraction and human-reviewed pending records. |
+| **OCR extraction runtime** | Accepted Phase 4 design; not deployed | Processes paired scout screenshots into confidence-gated, reviewable stat batches. |
 
 **Discord is not a database. Supabase is.**
 
@@ -141,15 +142,21 @@ Proof threads attached to match reports:
 
 ## Future OCR Design
 
-ForgeLens is not implemented or deployed. The Phase 4 design would process proof-thread screenshots and generate pending stat records with confidence scores. If implemented, **OCR must never directly mutate official stats**; every extracted stat must pass through admin review.
+The OCR extraction runtime is not implemented or deployed. The accepted Phase 4
+design processes paired scout screenshots and creates canonical stat-review
+records with field-level confidence. OCR never directly mutates official stats.
+Under ADR-008, a complete game may publish through the audited database RPC
+before human review only when every confidence and deterministic gate passes.
+The published extraction remains internally flagged until an authorized human
+clears the flag.
 
 ```
 Screenshot uploaded
-→ ForgeLens OCR
-→ Confidence score generated
-→ Pending stat record created
-→ Admin review / manual correction
-→ Official stat written
+→ OCR-assisted extraction
+→ Field confidence and deterministic validation
+→ Canonical stat-review batch created
+→ Auto-publish as review-flagged, or route to manual review
+→ Human unflag, dispute, or correction remains auditable
 ```
 
 ---

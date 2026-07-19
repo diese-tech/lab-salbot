@@ -37,11 +37,20 @@ There is no shortcut path.
 
 Admin-only operational setup and identity maintenance is the exception. Commands such as `/division-role-config` and `/division-sync` may mutate `division_role_mappings`, `players.discord_id`, and Discord roles directly after validating `admin_users`. They still must write `audit_logs`.
 
-### 3. OCR never writes to player_stats
+### 3. OCR never writes directly to player_stats
 
-ForgeLens is a future Phase 4 design, not a deployed service. If implemented, it creates `pending_stat_records` only.
+OCR-assisted extraction creates canonical stat-review records. It never writes
+directly to `player_stats`.
 
-`player_stats` rows are written only by the approval handler after an admin explicitly approves a `pending_stat_record`.
+Under ADR-008, a complete game may publish before human review only through the
+service-role-only transactional RPC when every required field for every player
+has confidence greater than 0.97 and all deterministic pairing, identity,
+aggregate, duplicate, and evidence checks pass. Any failed gate routes the
+whole game to human review.
+
+An auto-published extraction is immediately visible but remains internally
+flagged until an authorized human clears the flag. Publication, flag changes,
+disputes, and corrections must write immutable audit events.
 
 ### 4. audit_logs are immutable
 
@@ -95,10 +104,10 @@ Do not add defensive checks for internal function call sequences where the calle
 These features are explicitly deferred. Do not implement them unless `ROADMAP.md` has been updated to include them in the current phase.
 
 - Adding a web package here; web work belongs in `diese-tech/sal-site`
-- ForgeLens OCR runtime (Phase 4; design documents only today)
+- An extraction runtime that bypasses ADR-008, the canonical stat-review records, or the service RPC
 - Standings calculation (Phase 5)
 - Player/team pages (Phase 5)
-- OCR auto-approval
+- Direct or confidence-only OCR writes to official stats
 - Bot message scanning as an intake path
 - Multi-season archival tooling
 - Public API for stats
@@ -129,7 +138,7 @@ These are operationally critical paths. Flag them for explicit review, not just 
 |-----------|-------------|----------------|
 | Discord bot | `pending_actions`, `audit_logs`, `matches` (via approval handler) | `player_stats` directly |
 | Discord bot admin operations | `audit_logs`, `division_role_mappings`, empty `players.discord_id`, Discord roles | conflicting `players.discord_id` overwrites |
-| Future ForgeLens | `pending_stat_records` | `player_stats`, `matches`, `pending_actions` |
+| OCR extraction service | Canonical stat-review records and the ADR-008 service RPC | Direct writes to `player_stats`, `matches`, or `pending_actions` |
 | `sal-site` | Any table via service role | (none, but all mutations must write audit_log) |
 | Supabase RLS | Enforces boundaries | N/A |
 
@@ -144,6 +153,7 @@ These are operationally critical paths. Flag them for explicit review, not just 
 - [ ] Is error handling scoped to real failure modes (not defensive theatre)?
 - [ ] Is the feature within the current phase scope?
 - [ ] Do the tests cover the approval path?
+- [ ] If OCR auto-publication is enabled, does the complete game satisfy every ADR-008 gate and remain review-flagged?
 
 If any answer is no, do not mark the task complete.
 

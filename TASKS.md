@@ -80,7 +80,7 @@ Completed operations foundation now includes the Operations Engine, `/division-r
 ## Future Work
 
 - [ ] Additional `sal-site` admin workflows (Phase 3; separate repository)
-- [ ] ForgeLens OCR runtime (Phase 4; future design only)
+- [ ] OCR-assisted scout extraction runtime (Phase 4; accepted in ADR-008, not deployed)
 - [ ] Standings calculation (Phase 5)
 - [ ] Player/team pages (Phase 5)
 
@@ -120,7 +120,7 @@ None currently.
 | Additional `sal-site` admin workflows | Phase 3 — Discord approval sufficient for MVP |
 | ForgeLens OCR | Phase 4 — not blocking match operations |
 | Standings display | Phase 5 — depends on confirmed result pipeline |
-| OCR auto-approval | Requires calibration data + new ADR |
+| Confidence-gated OCR auto-publication | Planned under ADR-008; blocked by extraction, transactional RPC, calibration, and staging gates |
 | Bot message scanning fallback | Commands-first; scanning adds complexity without clear benefit at MVP scale |
 
 ---

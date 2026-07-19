@@ -4,7 +4,7 @@
 
 Phased plan from scaffold to production-ready platform.
 
-The active workspace contains only `apps/bot`, `packages/db`, and `packages/shared`. The web/control center is [`diese-tech/sal-site`](https://github.com/diese-tech/sal-site). ForgeLens remains future design and has no runtime package or deployment.
+The active workspace contains only `apps/bot`, `packages/db`, and `packages/shared`. The web/control center is [`diese-tech/sal-site`](https://github.com/diese-tech/sal-site). OCR-assisted scout extraction is accepted under ADR-008 but has no runtime package or deployment.
 
 ---
 
@@ -93,9 +93,9 @@ Scope:
 
 ---
 
-## Phase 4: ForgeLens Integration
+## Phase 4: OCR-Assisted Scout Extraction
 
-**Status:** Future design only. No ForgeLens runtime package or deployment exists.
+**Status:** Accepted design under ADR-008. No extraction runtime package or deployment exists.
 
 **Goal:** Screenshots are OCR-processed and stats appear in admin review.
 
@@ -105,12 +105,17 @@ Scope:
 - OCR pipeline (initial implementation; Tesseract or cloud provider)
 - `pending_stat_records` creation
 - Confidence scoring (initial heuristic model)
+- Complete-game auto-publication when every ADR-008 gate passes
+- Non-blocking review flag, human unflag, dispute, and correction workflow
 - Admin stat review UI in `sal-site`
 - Player name linking UI
 - Stat approval → `player_stats` write
 - Audit log for stat approvals
 
-**Done when:** A proof thread screenshot produces a `pending_stat_record` that an admin can review and approve, resulting in a `player_stats` row with a full audit trail.
+**Done when:** A verified scoreboard and match-details pair produces a canonical
+complete-game stat batch. A game passing every ADR-008 gate publishes
+immediately and remains review-flagged; every other game enters manual review.
+Publication, unflagging, disputes, and corrections retain a full audit trail.
 
 ---
 
@@ -146,7 +151,6 @@ Scope:
 ## Deferred (Post-Season 1)
 
 - ForgeLens confidence model calibration against real data
-- Auto-approval consideration for sustained high-accuracy OCR (requires new ADR)
 - Multi-season support (season archival, new season scaffolding)
 - Public API for stats (third-party integrations)
 - Mobile-optimized captain workflow

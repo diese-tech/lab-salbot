@@ -1,8 +1,11 @@
 # Stat Approval Lifecycle
 
-> **Status:** Future Phase 4 design specification. ForgeLens and this OCR-driven lifecycle are not implemented or deployed.
+> **Status:** Legacy Phase 4 review design. ADR-008 supersedes the human-review-only publication rule. Use ADR-008 and the consolidated implementation specification for new work.
 
-Stats are never written automatically. Every stat passes through human review before it becomes official.
+The extraction service never writes directly to official stats. Under ADR-008,
+a complete game may publish through the transactional database RPC before human
+review when every confidence and deterministic gate passes. Auto-published
+games remain internally review-flagged.
 
 ---
 
