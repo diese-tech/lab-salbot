@@ -40,6 +40,10 @@ The bot provides audited administrator commands for configuring:
 
 These commands update the canonical mappings owned by `sal-database`.
 
+Before any mapping mutation, the bot validates the actor against
+`admin_users`. Possessing a Discord staff role alone never authorizes operational
+configuration.
+
 Ordinary player division-role mappings remain separate from captain,
 organization, caster, and production authorization mappings.
 
@@ -68,13 +72,27 @@ Commands validate that the initiating captain is authorized for the selected org
 
 Every step before **Post Proposal** is ephemeral. No incomplete selection, draft, validation error, or private review is posted publicly. Uneven player counts are allowed; draft slots or other compensation are not part of a roster trade.
 
-After **Post Proposal**, the bot creates the durable pending transaction and posts a public proposal card in that division's trade-block channel. The card displays the complete exchange and provides **Accept**, **Counter**, and **Decline** buttons.
+After **Post Proposal**, the bot creates the durable roster-transaction proposal
+and a linked `pending_actions` orchestration record, then posts a public proposal
+card in that division's trade-block channel. The card displays the complete
+exchange and provides **Accept**, **Counter**, and **Decline** buttons.
 
-Only the authorized captain of the receiving organization may accept or decline. Acceptance requires confirmation of the exact current revision. The proposing captain may withdraw while the transaction is still pending.
+Every revision identifies one proposing organization and one receiving
+organization. Only an authorized captain of that revision's receiving
+organization may accept or decline. Acceptance requires confirmation of the
+exact current revision. The proposing captain may withdraw while the transaction
+is still pending.
 
 ### Counteroffers
 
-**Counter** opens a prefilled ephemeral wizard for the receiving captain. The captain may change the organizations' selected players and privately review the result before explicitly posting it. Posting a counteroffer creates a new durable revision and invalidates acceptance of the prior revision. The public card is updated or superseded so that only the current revision can be acted upon.
+**Counter** opens a prefilled ephemeral wizard for the receiving captain. The
+captain may change the organizations' selected players and privately review the
+result before explicitly posting it. Posting a counteroffer creates a new durable
+revision and invalidates acceptance of the prior revision. The countering
+organization becomes the new revision's proposer, and the original proposer
+becomes its receiving organization and required acceptor. A captain can never
+accept that captain's own revision. The public card is updated or superseded so
+that only the current revision can be acted upon.
 
 ### Claims, drops, and draft-position swaps
 
@@ -82,13 +100,47 @@ Only the authorized captain of the receiving organization may accept or decline.
 
 ### Admin approval
 
-Captain acceptance never mutates rosters directly. Accepted trades and submitted claims, drops, and draft-position swaps are routed to the existing private admin-review channel. Admin actions approve or reject the current durable revision.
+Captain acceptance never mutates rosters directly. Accepted trades and submitted
+claims, drops, and draft-position swaps are routed through their linked
+`pending_actions` records and the existing private admin-review channel. Admin
+buttons approve or reject through the shared pending-action claim and dispatch
+pipeline; they do not create a second approval path.
 
 Database execution remains authoritative and enforces season, division, eligibility, roster-capacity, transaction-state, and concurrency rules. If execution is blocked, the bot reports the reason without publishing a completed transaction.
 
+Every completed claim, drop, trade, Draft Position Swap, or reversal appends an
+immutable `audit_logs` row in the same authoritative database transaction. The
+audit row records the actor, action, affected entities, and old and new values.
+
 ### Durable event delivery
 
-The bot consumes the database `operation_outbox` through a lease-based worker. It does not depend on an in-memory event or a live process surviving between approval and delivery. Each completed operation has a stable idempotency key, and the bot records delivery so retries cannot create duplicate Discord posts.
+The bot consumes the database `operation_outbox` through a lease-based worker. It
+does not depend on an in-memory event or a live process surviving between
+approval and delivery.
+
+Discord does not provide a native idempotency key for message creation, so an
+acknowledgement row alone cannot guarantee exactly-once delivery across a crash
+after posting.
+
+Each completed operation therefore has a stable public marker such as
+`sal-operation:<operation-id>` in its embed metadata. Before posting or retrying,
+the worker:
+
+1. acquires the operation lease;
+2. checks the durable delivery record;
+3. reconciles recent bot messages in the target channel for the stable marker;
+4. records and reuses the discovered Discord message ID when a prior post is
+   found; and
+5. posts only when neither durable state nor channel reconciliation finds an
+   existing message.
+
+If Discord history cannot be reconciled after an ambiguous post attempt, the
+operation enters `needs_reconciliation`, alerts `CHANNEL_ADMIN_REVIEW`, and does
+not blindly repost. An administrator may link the existing message or explicitly
+retry after confirming that no post exists.
+
+This provides crash-safe reconciliation and duplicate suppression without
+claiming that Discord itself supports transactional exactly-once publication.
 
 ### Discord organization-role synchronization
 
@@ -166,7 +218,8 @@ message.
 - Informal trade-block discussion remains human conversation and cannot accidentally mutate roster state.
 - Public proposals provide visible consent controls, while final roster changes remain admin-gated.
 - Counteroffers are explicit revisions, preventing stale acceptance from executing a superseded deal.
-- Durable outbox consumption makes Discord delivery retryable and auditable.
+- Durable outbox consumption makes Discord delivery retryable, reconcilable, and
+  auditable.
 - One consolidated transactions channel produces a league-wide bulletin while division tags and canonical organization tags keep posts readable on mobile.
 - The bot depends on database transaction and outbox contracts owned by `sal-database`.
 - Discord organization roles converge on canonical season rosters after completed
@@ -191,7 +244,10 @@ message.
 - Own channel configuration and command-channel guards.
 - Implement the ephemeral command wizards, public proposal cards, and component authorization.
 - Route accepted submissions to the private admin-review workflow.
+- Create and process linked `pending_actions` records through the shared claim
+  and dispatch pipeline.
 - Lease, deliver, and acknowledge durable outbox events.
+- Reconcile stable operation markers before retrying ambiguous Discord posts.
 - Render transaction and draft-conclusion messages using canonical organization tags and roster links.
 - Resolve the Discord member and organization-role mappings needed for each
   completed roster transaction.
@@ -202,6 +258,7 @@ message.
   channel with sufficient context for manual remediation.
 - Implement audited configuration commands for division-specific Captain,
   organization, Caster, and Production role mappings.
+- Validate every role-mapping command actor against `admin_users`.
 - Keep authorization-role mappings separate from ordinary player division-role
   synchronization.
 - Deliver a draft-conclusion message only from the durable event emitted after
@@ -231,8 +288,11 @@ message.
 13. Claims do not reserve players while pending.
 14. Draft-position swaps exchange complete base positions, permit no additional compensation, and cannot be submitted after room start.
 15. A blocked or rejected operation produces no completed transaction announcement.
-16. Completed transactions publish once to the consolidated channel with a leading division chip and canonical organization tags.
-17. Delivery retries do not duplicate public posts.
+16. Completed transactions settle on one canonical consolidated-channel message
+    with a leading division chip and canonical organization tags.
+17. Ambiguous delivery attempts reconcile the stable operation marker before any
+    retry; unresolved ambiguity alerts administrators and never triggers a blind
+    repost.
 18. Routine public messages omit private administrative and sanction details.
 19. Normal draft picks do not create individual transactions-channel messages.
 20. Resolving the final slot without End Draft publication produces no conclusion
@@ -260,3 +320,12 @@ message.
     message.
 32. Captain, organization, Caster, and Production role-mapping changes are
     canonical and audited.
+33. Every submitted roster transaction creates a linked `pending_actions`
+    orchestration record.
+34. Administrator decisions run through the shared pending-action claim and
+    dispatch pipeline.
+35. Every completed roster mutation appends an immutable `audit_logs` row with
+    actor and old/new values in the authoritative transaction.
+36. A counteroffer makes the countering organization the new proposer and
+    requires acceptance from the opposite organization.
+37. Staff role-mapping commands validate the actor against `admin_users`.
