@@ -26,6 +26,8 @@ The bot needs:
 
 - View Channels
 - Send Messages
+- Embed Links
+- Read Message History
 - Create Public Threads
 - Send Messages in Threads
 - Use Slash Commands
@@ -40,10 +42,10 @@ changes if the bot role is lower than the target role.
 In the Developer Portal, go to **OAuth2 → URL Generator**:
 
 1. Under **Scopes**, check `bot` and `applications.commands`.
-2. Under **Bot Permissions**, check exactly the six permissions listed above
-   (View Channels, Send Messages, Create Public Threads, Send Messages in
-   Threads, Use Slash Commands, Manage Roles). This produces permissions
-   integer `311653567488`.
+2. Under **Bot Permissions**, check exactly the eight permissions listed above
+   (View Channels, Send Messages, Embed Links, Read Message History, Create
+   Public Threads, Send Messages in Threads, Use Slash Commands, Manage Roles).
+   This produces permissions integer `311653649408`.
 3. Open the generated URL, pick the server, authorize.
 4. In **Server Settings → Roles**, drag the bot's role above every division
    role (Solar/Lunar/Terra) before running any division sync commands.
@@ -51,7 +53,7 @@ In the Developer Portal, go to **OAuth2 → URL Generator**:
 Or build the invite link directly:
 
 ```
-https://discord.com/api/oauth2/authorize?client_id=YOUR_CLIENT_ID&permissions=311653567488&scope=bot%20applications.commands
+https://discord.com/api/oauth2/authorize?client_id=YOUR_CLIENT_ID&permissions=311653649408&scope=bot%20applications.commands
 ```
 
 ## Slash Command Registration
@@ -117,7 +119,8 @@ Before enabling `/trade`, `/claim`, `/drop`, or `/draft-position-swap`:
 7. Verify completed-operation delivery and role-reconciliation failure alerts
    in a non-production guild before enabling production commands.
 
-The transaction channel needs only normal bot read/send/embed permissions.
-Trade-block channels need command use, message send, embed, component, and
-autocomplete access. SALBot does not need draft-room administration permissions
-because draft-room controls remain in `sal-site`.
+The transaction channel needs View Channel, Send Messages, Embed Links, and Read
+Message History so the worker can reconcile stable delivery markers before
+retrying an ambiguous post. Trade-block channels need command use, message send,
+embed, component, and autocomplete access. SALBot does not need draft-room
+administration permissions because draft-room controls remain in `sal-site`.
