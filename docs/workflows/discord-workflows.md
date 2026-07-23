@@ -20,13 +20,21 @@ Why this matters:
 
 Captains are expected to use commands. If a captain posts a score in chat without using the command, the bot may optionally detect it and prompt them to use the command, but the scan result itself is not treated as an official submission.
 
-Admin-only operational commands, such as division role setup and division sync, do not use `pending_actions` because the admin is already taking the action directly. They still validate `admin_users` and write `audit_logs` for every mutation.
+Admin-only operational commands, such as division role setup, division sync,
+and captain/organization/broadcast role mapping, do not use `pending_actions`
+because the admin is already taking the setup action directly. They still
+validate `admin_users` and write `audit_logs` for every mutation.
+
+Roster mutations are different: `/trade`, `/claim`, `/drop`, and
+`/draft-position-swap` always use the shared `pending_actions` pipeline, even
+after captain consent. Only database approval execution changes canonical
+rosters or draft positions.
 
 ---
 
 ## Captain Resolution
 
-Every captain command (`/report-result`, `/reschedule`) starts with identity resolution:
+Current match commands (`/report-result`, `/reschedule`) start with identity resolution:
 
 ```
 Discord user ID
@@ -39,9 +47,25 @@ Discord user ID
 If the Discord user is not found in `players`, or is not flagged as a captain, the command returns an ephemeral error. The user is not shown a match dropdown.
 
 This prevents:
+
 - Unregistered users submitting results
 - Non-captains submitting on behalf of their org
 - Match selection from the wrong division
+
+Planned roster commands use the stricter season-scoped authorization defined in
+ADR-009:
+
+```
+Discord user ID
+  → active-season player identity
+  → division-specific Captain role
+  → organization role
+  → organization team in the command channel's division
+```
+
+Both roles are required. This survives captain changes without issuing
+captain-specific links and allows one organization to field separate teams in
+Solar, Lunar, and Terra.
 
 ---
 
@@ -49,10 +73,10 @@ This prevents:
 
 Every review card (`/report-result`, `/reschedule`, `/request-admin-review`) has exactly three buttons:
 
-| Button | Behavior |
-|--------|---------|
-| **Approve** | Executes the mutation for that action type. Updates the public receipt embed (if any) to ✅. Updates the review card. Writes an audit log. |
-| **Deny** | Shows a modal for the denial reason (required). Updates the receipt embed to ❌ and the review card. Writes an audit log. DMs the submitting captain with the reason. |
+| Button            | Behavior                                                                                                                                                              |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Approve**       | Executes the mutation for that action type. Updates the public receipt embed (if any) to ✅. Updates the review card. Writes an audit log.                            |
+| **Deny**          | Shows a modal for the denial reason (required). Updates the receipt embed to ❌ and the review card. Writes an audit log. DMs the submitting captain with the reason. |
 | **⚠️ Needs Info** | Shows a modal for what info is needed (required). Updates the receipt embed to ⚠️ and the review card. Writes an audit log. DMs the submitting captain with the note. |
 
 Only users in `admin_users` can press these buttons — anyone else gets an ephemeral "Only admins can use this button" reply.
@@ -93,10 +117,50 @@ When a captain reports a result, the bot opens a thread under the public receipt
 
 ## Channel Configuration
 
-| Channel | Purpose | Configured via |
-|---------|---------|--------|
-| `CHANNEL_ADMIN_REVIEW` | All admin review cards, all divisions | Single env var |
-| `CHANNEL_RESULTS_SOLAR` / `_LUNAR` / `_TERRA` | Public match receipts, one per division | Env var per division |
-| `CHANNEL_RESCHEDULES_SOLAR` / `_LUNAR` / `_TERRA` | Public reschedule receipts, one per division | Env var per division |
+| Channel                                           | Purpose                                                                       | Configured via       |
+| ------------------------------------------------- | ----------------------------------------------------------------------------- | -------------------- |
+| `CHANNEL_ADMIN_REVIEW`                            | All admin review cards, all divisions                                         | Single env var       |
+| `CHANNEL_RESULTS_SOLAR` / `_LUNAR` / `_TERRA`     | Public match receipts, one per division                                       | Env var per division |
+| `CHANNEL_RESCHEDULES_SOLAR` / `_LUNAR` / `_TERRA` | Public reschedule receipts, one per division                                  | Env var per division |
+| `CHANNEL_TRADE_BLOCK_SOLAR` / `_LUNAR` / `_TERRA` | Informal trade discussion and official roster-command entry, one per division | Env var per division |
+| `CHANNEL_TRANSACTIONS`                            | Completed league-wide roster transaction and draft-conclusion bulletin        | Single env var       |
 
 Channel IDs live entirely in bot deployment environment variables (`apps/bot/src/lib/channels.ts`) — they are **not** stored in the `divisions` table or anywhere in Supabase. Adding a division requires adding its channel env vars to the deployment, not a database migration.
+
+Plain-language trade-block messages, including “OTB,” never trigger a command
+or database action.
+
+---
+
+## Planned roster transaction lifecycle
+
+1. Captain command input and review remain ephemeral.
+2. Explicit submission creates durable transaction state and a linked
+   `pending_actions` record.
+3. Trade proposals post a public division-channel card for counterpart consent.
+4. Accepted trades, claims, drops, and draft-position swaps enter the existing
+   private admin-review pipeline.
+5. Approval executes one authoritative database transaction, including the
+   immutable audit entry and durable outbox event.
+6. The bot publishes the completed operation to `CHANNEL_TRANSACTIONS`.
+7. Claims, drops, trades, and reversals reconcile Discord organization roles
+   from the resulting canonical roster.
+8. Failed role reconciliation alerts `CHANNEL_ADMIN_REVIEW`; it never rolls
+   back the database operation or exposes private reasons publicly.
+
+The public mobile format uses one leading division chip and canonical
+organization tags:
+
+```text
+[SOLAR] FF traded Crow to TC for The_Expert133
+[LUNAR] EV claimed XGN Ninja
+```
+
+Draft picks are not individually posted. After an administrator successfully
+uses **End Draft & Publish Rosters** in `sal-site`, the durable conclusion event
+produces one transactions-channel message with a short link to the division's
+canonical roster page.
+
+SALBot does not open, start, pause, undo, redo, or end draft rooms. Those
+controls and audience-specific draft views belong to `sal-site`; SALBot only
+delivers the resulting durable Discord event.

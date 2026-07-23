@@ -1,25 +1,127 @@
 # SALBot Commands
 
-Every slash command SALBot registers, what it does, and who can run it. The
-**Quick Reference** table is the same text the bot posts for `/help` — keep
-both in sync if you add, remove, or change a command (`apps/bot/src/commands/help.ts`).
+Every current and accepted planned SALBot slash command, what it does, and who
+can run it.
+
+The **Current Quick Reference** table is the same command surface the bot posts
+for `/help`. Keep it and `apps/bot/src/commands/help.ts` in sync when a command
+is implemented, removed, or changed. Commands in **Accepted planned commands**
+must not appear in `/help` or be described to operators as live until their
+handlers, database contracts, permissions, and deployment configuration ship.
 
 ---
 
-## Quick Reference
+## Current Quick Reference
 
-| Command | Who | What it does |
-|---|---|---|
-| `/report-result` | Captains | Report a completed match's score. Posts a public receipt, opens a proof-upload thread, and sends the result to admin review. |
-| `/reschedule` | Captains | Request a new date/time for an upcoming match. Posts a public receipt and sends the request to admin review. |
-| `/request-admin-review` | Everyone | Escalate an issue (score dispute, scheduling, eligibility, other) directly to admins. No public receipt. |
-| `/rules` | Everyone | Ask a question about the league ruleset. Answered by an AI assistant restricted to the official rules text. |
-| `/update-ign` | Everyone | Request an in-game name change with screenshot proof. **Not yet implemented** — replies asking you to see an admin for now. |
-| `/division-role-config` | Admins | Map a division (`solar`/`lunar`/`terra`) to a Discord role, or list current mappings. |
-| `/division-sync` | Admins | Bulk-link players' Discord accounts and sync division roles from a roster CSV. Preview, then apply. |
-| `/help` | Everyone | Show this list with a link to the full reference. |
+| Command                 | Who      | What it does                                                                                                                 |
+| ----------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `/report-result`        | Captains | Report a completed match's score. Posts a public receipt, opens a proof-upload thread, and sends the result to admin review. |
+| `/reschedule`           | Captains | Request a new date/time for an upcoming match. Posts a public receipt and sends the request to admin review.                 |
+| `/request-admin-review` | Everyone | Escalate an issue (score dispute, scheduling, eligibility, other) directly to admins. No public receipt.                     |
+| `/rules`                | Everyone | Ask a question about the league ruleset. Answered by an AI assistant restricted to the official rules text.                  |
+| `/update-ign`           | Everyone | Request an in-game name change with screenshot proof. **Not yet implemented** — replies asking you to see an admin for now.  |
+| `/division-role-config` | Admins   | Map a division (`solar`/`lunar`/`terra`) to a Discord role, or list current mappings.                                        |
+| `/division-sync`        | Admins   | Bulk-link players' Discord accounts and sync division roles from a roster CSV. Preview, then apply.                          |
+| `/help`                 | Everyone | Show this list with a link to the full reference.                                                                            |
 
 "Captains" means a `players` row with `is_captain = true` and `discord_id` linked to the caller. "Admins" means a row in `admin_users`.
+
+---
+
+## Accepted planned commands
+
+These commands are accepted by
+[ADR-009](adrs/ADR-009-roster-transactions-discord-workflow.md) but are not yet
+registered. Their names and scopes are the implementation contract.
+
+| Command                     | Who                                       | Channel scope                                                 | What it will do                                                                                                                                                      |
+| --------------------------- | ----------------------------------------- | ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/trade`                    | Division captains; admins for remediation | Matching division trade-block channel                         | Open an ephemeral offer wizard, then post a revisioned proposal with **Accept**, **Counter**, and **Decline** controls. Accepted terms still require admin approval. |
+| `/claim`                    | Division captains; admins for remediation | Matching division trade-block channel                         | Submit an available-player claim for admin approval. A pending claim does not reserve the player.                                                                    |
+| `/drop`                     | Division captains; admins for remediation | Matching division trade-block channel                         | Submit a roster drop for admin approval. A ban or suspension is an admin-only approval option.                                                                       |
+| `/draft-position-swap`      | Division captains; admins for remediation | Matching division trade-block channel; only before room start | Exchange two organizations' complete base draft positions with no other compensation.                                                                                |
+| `/captain-role-config`      | Admins                                    | Any admin-operable channel; ephemeral response                | Set or list the canonical Captain role for Solar, Lunar, or Terra.                                                                                                   |
+| `/organization-role-config` | Admins                                    | Any admin-operable channel; ephemeral response                | Set or list an organization's canonical Discord role and mobile tag.                                                                                                 |
+| `/broadcast-role-config`    | Admins                                    | Any admin-operable channel; ephemeral response                | Set or list the Caster or Production role mapping.                                                                                                                   |
+
+“Division captains” are authorized by the active season, organization,
+division-specific Captain role, and organization role. A global
+`players.is_captain` flag by itself is not sufficient for roster commands. An
+organization may have a team in every division; authorization is resolved for
+the command channel's division rather than assigning the organization to only
+one division.
+
+### `/trade` (planned)
+
+1. Verify that the command is in the configured trade-block channel for the
+   captain's division.
+2. Ask for the captain's organization and offered players in an ephemeral
+   wizard.
+3. Ask for the opposing organization and requested players.
+4. Require **Post Proposal** on a private review before anything is public.
+5. Allow only the opposite organization's authorized captain to **Accept**,
+   **Counter**, or **Decline** the current revision.
+6. Open a prefilled ephemeral wizard for **Counter**, then flip proposer and
+   recipient on the new revision.
+7. Allow the current revision's proposing captain to **Withdraw** before
+   counterpart acceptance.
+8. Route accepted terms through a linked `pending_actions` record. Captain
+   acceptance never changes a roster.
+9. Allow either participating organization's authorized captain to **Revoke
+   Consent** while the accepted transaction is still awaiting administrator
+   execution.
+
+Withdrawal or consent revocation atomically cancels the current transaction
+revision and its unclaimed pending action. It disables public controls and
+prevents later execution. It is rejected after an administrator worker has
+claimed execution or the transaction is already executing, completed, denied,
+cancelled, or superseded.
+
+Uneven trades are valid. Draft slots, money, future considerations, and other
+compensation are not valid roster-trade assets. Execution is blocked if a
+resulting team lacks roster capacity.
+
+### `/claim` (planned)
+
+The captain selects the authorized organization and searches available players
+by name. Autocomplete narrows results as text is entered so the full
+cross-division pool is never dumped into Discord.
+
+The normal pool is division-local. A captain may manually search one division
+lower: Terra may claim from Solar, Solar may claim from Lunar, and Lunar has no
+lower division. A team cannot reach past the adjacent lower division. The
+database rechecks season eligibility and availability at approval time.
+Submission time may inform waiver priority, but a pending claim does not reserve
+the player.
+
+### `/drop` (planned)
+
+The captain selects an authorized organization and current roster member,
+reviews the request privately, and submits it to the shared admin pipeline.
+Routine public notices omit private reasons. During approval, an admin may
+separately apply a ban or suspension when the reason warrants discipline, such
+as a self-drop.
+
+### `/draft-position-swap` (planned)
+
+The initiating captain selects both organizations in the same division. The
+proposal exchanges their complete predetermined draft positions across all
+snake rounds. Counterpart consent and admin approval are required. The command
+accepts no additional compensation and closes once the division room starts.
+
+### Planned role-configuration commands
+
+`/captain-role-config`, `/organization-role-config`, and
+`/broadcast-role-config` follow the setup safety contract:
+
+- validate the caller against `admin_users`;
+- read and write mappings through `packages/db`;
+- never grant authority from a Discord role alone;
+- append immutable `audit_logs` with actor and old/new values; and
+- return setup output ephemerally.
+
+`/organization-role-config` also owns the canonical short tag used in mobile
+transaction messages, such as `FF`, `TC`, or `EV`.
 
 ---
 
@@ -104,3 +206,7 @@ Posts the Quick Reference table above as an embed, plus a link to this document 
 ## Cross-Cutting Behavior
 
 For everything that isn't specific to one command — the admin review card's button behavior, stale-approval protection, status embed updates, proof-thread attachment handling, and channel configuration — see [`workflows/discord-workflows.md`](workflows/discord-workflows.md).
+
+For authoritative transaction execution, role synchronization, the public
+bulletin, and draft-conclusion behavior, see
+[`adrs/ADR-009-roster-transactions-discord-workflow.md`](adrs/ADR-009-roster-transactions-discord-workflow.md).
