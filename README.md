@@ -41,12 +41,12 @@ There is no extraction runtime package or deployment in the current workspace.
 
 ### Component Responsibilities
 
-| Component | Status | Role |
-|-----------|--------|------|
-| **Supabase** | Current | Authoritative runtime state; the schema contract release process is owned by [`diese-tech/sal-database`](https://github.com/diese-tech/sal-database). SALbot vendors and verifies immutable `db-v1.2.0` at commit `195a0792a396354d7809d7dcbb85a9cdfd4d8030`. |
-| **Discord Bot** | Current; this repository | Workflow intake, captain commands, admin operations, public receipts, review cards, and proof threads. |
-| **[`sal-site`](https://github.com/diese-tech/sal-site)** | Current; separate repository | Public website and operational control center. |
-| **OCR extraction runtime** | Accepted Phase 4 design; not deployed | Processes paired scout screenshots into confidence-gated, reviewable stat batches. |
+| Component                                                | Status                                | Role                                                                                                                                                                                                                                                          |
+| -------------------------------------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Supabase**                                             | Current                               | Authoritative runtime state; the schema contract release process is owned by [`diese-tech/sal-database`](https://github.com/diese-tech/sal-database). SALbot vendors and verifies immutable `db-v1.2.0` at commit `195a0792a396354d7809d7dcbb85a9cdfd4d8030`. |
+| **Discord Bot**                                          | Current; this repository              | Workflow intake, captain commands, admin operations, public receipts, review cards, and proof threads.                                                                                                                                                        |
+| **[`sal-site`](https://github.com/diese-tech/sal-site)** | Current; separate repository          | Public website and operational control center.                                                                                                                                                                                                                |
+| **OCR extraction runtime**                               | Accepted Phase 4 design; not deployed | Processes paired scout screenshots into confidence-gated, reviewable stat batches.                                                                                                                                                                            |
 
 **Discord is not a database. Supabase is.**
 
@@ -95,6 +95,21 @@ Admin-only setup command. Admins map each SAL division to a Discord role from in
 
 Admin-only identity and role synchronization workflow. Admins upload a roster CSV, preview proposed Discord identity links and role changes, then apply the sync with a short-lived confirmation token.
 
+### Accepted roster transaction command scope
+
+ADR-009 defines the next SALBot command surface:
+
+- `/trade`, `/claim`, `/drop`, and `/draft-position-swap` for guided,
+  season-scoped captain submissions in division trade-block channels;
+- `/captain-role-config`, `/organization-role-config`, and
+  `/broadcast-role-config` for audited admin mapping; and
+- durable completed-transaction, draft-conclusion, and Discord
+  organization-role reconciliation workers.
+
+These commands are accepted design, not currently registered production
+commands. See [`docs/commands.md`](docs/commands.md) for the complete permission
+and channel-scope contract.
+
 ---
 
 ## Command Philosophy
@@ -104,6 +119,7 @@ Admin-only identity and role synchronization workflow. Admins upload a roster CS
 Captains are expected to use slash commands. The bot may optionally scan channels for fallback detection, but scanned messages never become authoritative without a corresponding pending action processed through the normal pipeline.
 
 This means:
+
 - Every legitimate action has a corresponding `pending_actions` record.
 - Admins always review before mutations occur.
 - No state changes happen silently.
@@ -114,10 +130,10 @@ This means:
 
 Every actionable command produces two posts:
 
-| Post | Location | Purpose |
-|------|----------|---------|
-| Public receipt | `#match-results-[division]` or `#reschedules-[division]` | Transparency, compliance, prizing verification |
-| Admin review card | `#admin-review` | Triage, approval, workflow actions |
+| Post              | Location                                                 | Purpose                                        |
+| ----------------- | -------------------------------------------------------- | ---------------------------------------------- |
+| Public receipt    | `#match-results-[division]` or `#reschedules-[division]` | Transparency, compliance, prizing verification |
+| Admin review card | `#admin-review`                                          | Triage, approval, workflow actions             |
 
 Proof threads attached to match reports:
 
@@ -129,14 +145,14 @@ Proof threads attached to match reports:
 
 ## Status Emoji Semantics
 
-| Emoji | Meaning |
-|-------|---------|
-| 📝 | Received / under review |
-| 📸 | Awaiting proof upload |
-| ⚠️ | Needs info |
-| ✅ | Approved |
-| ❌ | Denied |
-| 🔁 | Revised |
+| Emoji | Meaning                 |
+| ----- | ----------------------- |
+| 📝    | Received / under review |
+| 📸    | Awaiting proof upload   |
+| ⚠️    | Needs info              |
+| ✅    | Approved                |
+| ❌    | Denied                  |
+| 🔁    | Revised                 |
 
 ---
 
