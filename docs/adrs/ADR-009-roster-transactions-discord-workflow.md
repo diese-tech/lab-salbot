@@ -70,6 +70,47 @@ Database execution remains authoritative and enforces season, division, eligibil
 
 The bot consumes the database `operation_outbox` through a lease-based worker. It does not depend on an in-memory event or a live process surviving between approval and delivery. Each completed operation has a stable idempotency key, and the bot records delivery so retries cannot create duplicate Discord posts.
 
+### Discord organization-role synchronization
+
+Completed claims, drops, trades, and reversals enqueue durable Discord
+organization-role synchronization.
+
+The bot reconciles roles to the resulting canonical season roster:
+
+- a claim adds the claiming organization's Discord role to the player;
+- a drop removes the releasing organization's Discord role from the player;
+- a trade removes each moved player's former organization role and adds the
+  receiving organization role;
+- a reversal reconciles every affected player's organization roles to the
+  resulting canonical roster; and
+- a Draft Position Swap does not change player roles.
+
+The database transaction commits before role synchronization begins. Discord
+permission, availability, or API failures do not roll back the completed
+transaction.
+
+Role reconciliation is idempotent and retryable. Before changing roles, the bot
+reads the canonical roster result and compares it with the member's current
+organization roles. A retry therefore converges on the same intended state
+instead of repeating a blind add or removal.
+
+If reconciliation fails or remains incomplete, the bot posts an actionable alert
+to `CHANNEL_ADMIN_REVIEW`. The alert identifies:
+
+- the transaction;
+- the affected Discord member and player;
+- the intended organization role state;
+- the failed operation;
+- the latest error; and
+- whether another automatic retry is pending.
+
+The alert does not expose private transaction or disciplinary reasons in public
+channels.
+
+Public transaction delivery does not wait for role synchronization. The public
+message represents committed canonical roster state, while the private alert
+makes any Discord-role drift visible to administrators.
+
 Completed transactions are published to the consolidated transactions channel in a compact form such as:
 
 ```text
@@ -97,6 +138,14 @@ The link targets the canonical division roster page and may use the league's app
 - Durable outbox consumption makes Discord delivery retryable and auditable.
 - One consolidated transactions channel produces a league-wide bulletin while division tags and canonical organization tags keep posts readable on mobile.
 - The bot depends on database transaction and outbox contracts owned by `sal-database`.
+- Discord organization roles converge on canonical season rosters after completed
+  claims, drops, trades, and reversals.
+- A Discord permission or API failure cannot corrupt or roll back canonical
+  roster history.
+- Administrators receive an actionable private alert when automatic role
+  reconciliation cannot complete.
+- The transactions channel may temporarily show a committed roster movement
+  before the corresponding Discord roles finish synchronizing.
 
 ## Implementation ownership
 
@@ -113,6 +162,13 @@ The link targets the canonical division roster page and may use the league's app
 - Route accepted submissions to the private admin-review workflow.
 - Lease, deliver, and acknowledge durable outbox events.
 - Render transaction and draft-conclusion messages using canonical organization tags and roster links.
+- Resolve the Discord member and organization-role mappings needed for each
+  completed roster transaction.
+- Reconcile organization roles from canonical roster state instead of applying
+  unverified blind role mutations.
+- Retry failed role synchronization idempotently.
+- Post unresolved role-synchronization failures to the private administrator
+  channel with sufficient context for manual remediation.
 - Test permissions, stale revisions, retries, duplicate suppression, and mobile-safe output.
 
 ### `diese-tech/sal-site`
@@ -143,3 +199,19 @@ The link targets the canonical division roster page and may use the league's app
 18. Routine public messages omit private administrative and sanction details.
 19. Normal draft picks do not create individual transactions-channel messages.
 20. Draft finalization publishes one division conclusion message containing only a link to the canonical rosters page; an admin screenshot is optional.
+21. A completed claim adds the claiming organization's Discord role to the
+    claimed player.
+22. A completed drop removes the releasing organization's Discord role from the
+    dropped player.
+23. A completed trade removes each moved player's former organization role and
+    adds the receiving organization role.
+24. A completed reversal reconciles affected organization roles to the resulting
+    canonical roster.
+25. A Draft Position Swap performs no player-role mutation.
+26. Role synchronization reads canonical roster state and remains idempotent
+    across retries.
+27. Discord role failures never roll back a completed database transaction.
+28. An unresolved role failure posts an actionable alert to the private
+    administrator channel.
+29. Public transaction delivery can complete independently of role
+    synchronization.
