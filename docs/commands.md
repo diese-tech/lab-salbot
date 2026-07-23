@@ -63,8 +63,19 @@ one division.
    **Counter**, or **Decline** the current revision.
 6. Open a prefilled ephemeral wizard for **Counter**, then flip proposer and
    recipient on the new revision.
-7. Route accepted terms through a linked `pending_actions` record. Captain
+7. Allow the current revision's proposing captain to **Withdraw** before
+   counterpart acceptance.
+8. Route accepted terms through a linked `pending_actions` record. Captain
    acceptance never changes a roster.
+9. Allow either participating organization's authorized captain to **Revoke
+   Consent** while the accepted transaction is still awaiting administrator
+   execution.
+
+Withdrawal or consent revocation atomically cancels the current transaction
+revision and its unclaimed pending action. It disables public controls and
+prevents later execution. It is rejected after an administrator worker has
+claimed execution or the transaction is already executing, completed, denied,
+cancelled, or superseded.
 
 Uneven trades are valid. Draft slots, money, future considerations, and other
 compensation are not valid roster-trade assets. Execution is blocked if a

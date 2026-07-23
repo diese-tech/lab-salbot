@@ -126,9 +126,10 @@ This means:
 
 ---
 
-## Evidence System
+## Current Match-Workflow Evidence System
 
-Every actionable command produces two posts:
+The current `/report-result` and `/reschedule` workflows produce the applicable
+posts below. This is not a universal contract for planned roster commands.
 
 | Post              | Location                                                 | Purpose                                        |
 | ----------------- | -------------------------------------------------------- | ---------------------------------------------- |
@@ -140,6 +141,12 @@ Proof threads attached to match reports:
 - Track screenshot upload progress (`0/6 uploaded → 4/6 → ✅ complete`)
 - Are stored as evidence references in Supabase Storage
 - Provide the proposed input surface for a future ForgeLens implementation
+
+Planned roster workflows use different destinations: trade proposals post in
+the matching division trade-block channel, roster submissions enter private
+admin review, and only completed operations publish to the consolidated
+transactions channel. See [`docs/commands.md`](docs/commands.md) and
+[`docs/workflows/discord-workflows.md`](docs/workflows/discord-workflows.md).
 
 ---
 
