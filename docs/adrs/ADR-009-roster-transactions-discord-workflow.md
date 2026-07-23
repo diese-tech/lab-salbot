@@ -6,6 +6,8 @@
 - **Related database ADRs:**
   - [Season-scoped captain roster draft eligibility](https://github.com/diese-tech/sal-database/blob/main/docs/adr/0001-season-scoped-captain-roster-draft-eligibility.md)
   - [Roster transactions and public bulletin](https://github.com/diese-tech/sal-database/blob/main/docs/adr/0002-roster-transactions-and-public-bulletin.md)
+  - [Draft room lifecycle, authorization, and failure recovery](https://github.com/diese-tech/sal-database/blob/main/docs/adr/0003-draft-room-lifecycle-authorization-and-failure-recovery.md)
+  - [Audience-specific draft views and production board](https://github.com/diese-tech/sal-site/blob/main/docs/adr/0001-audience-specific-draft-views-and-production-board.md)
 
 ## Context
 
@@ -26,6 +28,24 @@ The bot is configured with:
 - `CHANNEL_TRANSACTIONS`
 
 Each division trade-block channel is an informal discussion space and the command surface for that division's roster mutations. The bot does not parse conversational phrases such as “on the block” or “OTB.” One consolidated transactions channel publishes completed transactions for the entire league.
+
+### Staff role configuration
+
+The bot provides audited administrator commands for configuring:
+
+- each division-specific Captain role;
+- each canonical organization role;
+- the Caster role; and
+- the Production role.
+
+These commands update the canonical mappings owned by `sal-database`.
+
+Ordinary player division-role mappings remain separate from captain,
+organization, caster, and production authorization mappings.
+
+Changing a mapping never grants access by itself. `sal-site` still verifies the
+member’s current Discord roles, season participation, room division, and
+server-side authorization rules.
 
 ### Official commands
 
@@ -120,7 +140,15 @@ Completed transactions are published to the consolidated transactions channel in
 
 The leading division chip provides the division context. Mobile messages use each organization's canonical tag; richer embeds may expose full organization names. Public sanction reasons are not included in routine drop messages.
 
-Normal draft picks are not posted individually to the transactions channel. When a division draft is finalized, its durable conclusion event produces one message:
+Normal draft picks are not posted individually to the transactions channel.
+
+Resolving the final slot does not publish a conclusion message. The room first
+enters `completion_review` according to the canonical lifecycle ADR.
+
+Only a successful **End Draft & Publish Rosters** operation emits the durable
+division draft-conclusion event.
+
+That event produces one message:
 
 ```text
 [SOLAR] Solar draft has concluded.
@@ -128,6 +156,9 @@ Normal draft picks are not posted individually to the transactions channel. When
 ```
 
 The link targets the canonical division roster page and may use the league's approved short URL. Any roster screenshot posted by an admin is an optional follow-up and never blocks the bot's conclusion message.
+
+Undo, redo, and completion-review activity never posts a false draft-conclusion
+message.
 
 ## Consequences
 
@@ -169,6 +200,12 @@ The link targets the canonical division roster page and may use the league's app
 - Retry failed role synchronization idempotently.
 - Post unresolved role-synchronization failures to the private administrator
   channel with sufficient context for manual remediation.
+- Implement audited configuration commands for division-specific Captain,
+  organization, Caster, and Production role mappings.
+- Keep authorization-role mappings separate from ordinary player division-role
+  synchronization.
+- Deliver a draft-conclusion message only from the durable event emitted after
+  successful End Draft publication.
 - Test permissions, stale revisions, retries, duplicate suppression, and mobile-safe output.
 
 ### `diese-tech/sal-site`
@@ -198,7 +235,8 @@ The link targets the canonical division roster page and may use the league's app
 17. Delivery retries do not duplicate public posts.
 18. Routine public messages omit private administrative and sanction details.
 19. Normal draft picks do not create individual transactions-channel messages.
-20. Draft finalization publishes one division conclusion message containing only a link to the canonical rosters page; an admin screenshot is optional.
+20. Resolving the final slot without End Draft publication produces no conclusion
+    message.
 21. A completed claim adds the claiming organization's Discord role to the
     claimed player.
 22. A completed drop removes the releasing organization's Discord role from the
@@ -215,3 +253,10 @@ The link targets the canonical division roster page and may use the league's app
     administrator channel.
 29. Public transaction delivery can complete independently of role
     synchronization.
+30. Successful End Draft publication produces one division conclusion message
+    containing only a link to the canonical rosters page; an admin screenshot is
+    optional.
+31. Undo, redo, and completion-review activity cannot produce a draft-conclusion
+    message.
+32. Captain, organization, Caster, and Production role-mapping changes are
+    canonical and audited.
