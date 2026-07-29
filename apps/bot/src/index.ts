@@ -1,11 +1,25 @@
 import { Client, GatewayIntentBits } from 'discord.js';
 import type { ChatInputCommandInteraction } from 'discord.js';
-import { isAdminUser } from '@salbot/db';
+import { randomUUID } from 'node:crypto';
+import { hostname } from 'node:os';
+import {
+  claimOperationOutbox,
+  completeOperationOutbox,
+  failOperationOutbox,
+  getOperationOutboxHealth,
+  isAdminUser,
+} from '@salbot/db';
 import { db } from './lib/db';
 import { validateRequiredEnv, warnOnMissingChannelEnv } from './lib/config';
 import { subscribeToGodDraftRecaps } from './lib/god-draft-recap';
 import { handleProofUpload, activeProofThreads } from './lib/proof-thread';
 import { toUserMessage } from './lib/errors';
+import { createOutboxProjector } from './lib/outbox-projections';
+import { registerOutboxDrain } from './lib/outbox-runtime';
+import { OperationOutboxWorker } from './lib/outbox-worker';
+import { startHealthServer, type RunningHealthServer } from './lib/health-server';
+import { ReadinessMonitor } from './lib/readiness';
+import { createShutdownHandler } from './lib/shutdown';
 
 // Command modules
 import * as reportResult from './commands/report-result';
@@ -15,6 +29,8 @@ import * as updateIgn from './commands/update-ign';
 import * as rules from './commands/rules';
 import * as divisionRoleConfig from './commands/division-role-config';
 import * as divisionSync from './commands/division-sync';
+import * as logScouter from './commands/log-scouter';
+import * as profile from './commands/profile';
 import * as help from './commands/help';
 
 // Approval handlers
@@ -42,6 +58,8 @@ const commands = new Map<string, CommandModule>([
   [rules.data.name, rules],
   [divisionRoleConfig.data.name, divisionRoleConfig],
   [divisionSync.data.name, divisionSync],
+  [logScouter.data.name, logScouter],
+  [profile.data.name, profile],
   [help.data.name, help],
 ]);
 
@@ -57,6 +75,43 @@ const client = new Client({
   ],
 });
 
+const outboxWorker = new OperationOutboxWorker(
+  {
+    claim: (workerId, limit) => claimOperationOutbox(db, workerId, limit),
+    project: createOutboxProjector(client, db),
+    complete: (outboxId, workerId, externalId) =>
+      completeOperationOutbox(db, outboxId, workerId, externalId),
+    fail: (outboxId, workerId, error, retryAfterSeconds) =>
+      failOperationOutbox(db, outboxId, workerId, error, retryAfterSeconds),
+    log: (level, event, details = {}) => {
+      const message = JSON.stringify({ component: 'operation_outbox', event, ...details });
+      if (level === 'error') console.error(message);
+      else if (level === 'warn') console.warn(message);
+      else console.log(message);
+    },
+  },
+  { workerId: `${hostname()}:${process.pid}:${randomUUID()}` },
+);
+registerOutboxDrain(() => outboxWorker.drainNow());
+
+const readiness = new ReadinessMonitor({
+  isDiscordReady: () => client.isReady(),
+  getOutboxStatus: () => outboxWorker.getStatus(),
+  checkDatabase: () => getOperationOutboxHealth(db),
+});
+let healthServer: RunningHealthServer | undefined;
+
+const shutdown = createShutdownHandler({
+  beginDrain: () => readiness.beginDrain(),
+  stopOutbox: () => outboxWorker.stop(25_000),
+  destroyDiscord: () => client.destroy(),
+  closeHealthServer: async () => {
+    if (healthServer) await healthServer.close();
+  },
+  exit: (code) => process.exit(code),
+  log: (message, error) => console.error(message, error),
+});
+
 // ── Process-level safety handlers ──────────────────────────────────────────────
 // Log-and-continue on unhandled rejections so a stray rejected promise doesn't
 // take the whole bot down (Node >=15 terminates the process by default).
@@ -65,25 +120,35 @@ process.on('unhandledRejection', (reason) => {
 });
 
 // Graceful shutdown on SIGTERM (e.g. Railway redeploys killing the process mid-operation).
-process.on('SIGTERM', async () => {
+process.on('SIGTERM', () => {
   console.log('[bot] SIGTERM received, shutting down...');
-  await client.destroy();
-  process.exit(0);
+  void shutdown();
 });
 
-client.once('ready', () => {
+client.once('ready', async () => {
   console.log(`[bot] Ready as ${client.user?.tag}`);
   console.log(`[bot] Loaded commands: ${[...commands.keys()].join(', ')}`);
   console.log('[bot] Required intents: Guilds, GuildMembers, GuildMessages, MessageContent');
   console.log('[bot] Required permissions: Manage Roles for /division-sync role updates');
   console.log(`[bot] Admin review channel: ${process.env.CHANNEL_ADMIN_REVIEW ?? 'NOT SET'}`);
   subscribeToGodDraftRecaps(client, db);
+  await outboxWorker.start();
 });
 
 // ── Interaction handler ────────────────────────────────────────────────────────────
 
 client.on('interactionCreate', async (interaction) => {
   try {
+    if (readiness.isDraining()) {
+      if (interaction.isRepliable()) {
+        await interaction.reply({
+          content: 'SALBot is restarting. Please retry in a moment.',
+          ephemeral: true,
+        });
+      }
+      return;
+    }
+
     // Slash commands
     if (interaction.isChatInputCommand()) {
       const cmd = commands.get(interaction.commandName);
@@ -100,12 +165,19 @@ client.on('interactionCreate', async (interaction) => {
         await reportResult.handleWinnerSelect(interaction);
       } else if (id === 'rs_match') {
         await reschedule.handleMatchSelect(interaction);
+      } else if (id.startsWith('profile_season:')) {
+        await profile.handleSeasonSelect(interaction);
       }
       return;
     }
 
     // Buttons
     if (interaction.isButton()) {
+      if (interaction.customId.startsWith('sc_up:')) {
+        await logScouter.handleUploadButton(interaction);
+        return;
+      }
+
       const [action, entityId] = interaction.customId.split(':');
 
       // Admin-only actions
@@ -141,6 +213,8 @@ client.on('interactionCreate', async (interaction) => {
       } else if (id.startsWith('modal_reject_stat:')) {
         const statRecordId = id.split(':')[1];
         await handleRejectStatModal(interaction, statRecordId);
+      } else if (id.startsWith('sc_modal:')) {
+        await logScouter.handleUploadModal(interaction);
       }
       return;
     }
@@ -161,16 +235,27 @@ client.on('interactionCreate', async (interaction) => {
 // ── Proof thread screenshot tracking (Phase 1 stub) ────────────────────────────────
 
 client.on('messageCreate', async (message) => {
+  if (readiness.isDraining()) return;
   if (message.author.bot || message.attachments.size === 0) return;
   if (!activeProofThreads.has(message.channelId)) return;
   await handleProofUpload(client, message.channelId, message.attachments.size);
 });
 
-client.login(process.env.DISCORD_TOKEN).catch((err) => {
-  // Login failures (bad/rotated DISCORD_TOKEN, auth/network issues at boot) are
-  // fatal, not the kind of stray rejection the unhandledRejection handler above
-  // is meant to absorb: without this, the process stays alive but never reaches
-  // 'ready', so a supervisor sees a live process instead of a restartable crash.
-  console.error('[bot] Fatal: failed to log in to Discord:', err);
-  process.exit(1);
-});
+const port = Number(process.env.PORT ?? '3000');
+if (!Number.isInteger(port) || port < 1 || port > 65_535) {
+  throw new Error('PORT must be an integer between 1 and 65535');
+}
+
+void startHealthServer(readiness, { port })
+  .then(async (server) => {
+    healthServer = server;
+    console.log(`[bot] Health server listening on port ${server.port}`);
+    await client.login(process.env.DISCORD_TOKEN);
+  })
+  .catch(async (error) => {
+    // Bind and login failures are fatal. A permanently non-ready process must
+    // exit so Railway can apply the configured restart policy.
+    console.error('[bot] Fatal startup failure:', error);
+    await healthServer?.close().catch(() => undefined);
+    process.exit(1);
+  });

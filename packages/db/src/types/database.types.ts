@@ -914,6 +914,66 @@ export type Database = {
           },
         ]
       }
+      operation_outbox: {
+        Row: {
+          aggregate_id: string
+          aggregate_type: string
+          attempts: number
+          available_at: string
+          completed_at: string | null
+          created_at: string
+          deduplication_key: string
+          event_type: string
+          external_id: string | null
+          id: string
+          last_error: string | null
+          lease_expires_at: string | null
+          lease_owner: string | null
+          payload: Json
+          state: string
+          topic: string
+          updated_at: string
+        }
+        Insert: {
+          aggregate_id: string
+          aggregate_type: string
+          attempts?: number
+          available_at?: string
+          completed_at?: string | null
+          created_at?: string
+          deduplication_key: string
+          event_type: string
+          external_id?: string | null
+          id?: string
+          last_error?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          payload?: Json
+          state?: string
+          topic: string
+          updated_at?: string
+        }
+        Update: {
+          aggregate_id?: string
+          aggregate_type?: string
+          attempts?: number
+          available_at?: string
+          completed_at?: string | null
+          created_at?: string
+          deduplication_key?: string
+          event_type?: string
+          external_id?: string | null
+          id?: string
+          last_error?: string | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          payload?: Json
+          state?: string
+          topic?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       org_brands: {
         Row: {
           id: string
@@ -1443,6 +1503,191 @@ export type Database = {
           },
         ]
       }
+      scouter_game_participants: {
+        Row: {
+          ally_healing: number | null
+          assists: number
+          created_at: string
+          damage_mitigated: number | null
+          damage_taken: number | null
+          deaths: number
+          god_id: string | null
+          gpm: number | null
+          id: string
+          jungle_damage: number | null
+          kills: number
+          minion_damage: number | null
+          player_damage: number | null
+          player_id: string | null
+          player_level: number | null
+          raw_ign: string
+          role: string | null
+          scouter_game_id: string
+          self_healing: number | null
+          side: string
+          structure_damage: number | null
+          updated_at: string
+          updated_by_discord_id: string | null
+          wards_placed: number | null
+        }
+        Insert: {
+          ally_healing?: number | null
+          assists?: number
+          created_at?: string
+          damage_mitigated?: number | null
+          damage_taken?: number | null
+          deaths?: number
+          god_id?: string | null
+          gpm?: number | null
+          id?: string
+          jungle_damage?: number | null
+          kills?: number
+          minion_damage?: number | null
+          player_damage?: number | null
+          player_id?: string | null
+          player_level?: number | null
+          raw_ign: string
+          role?: string | null
+          scouter_game_id: string
+          self_healing?: number | null
+          side: string
+          structure_damage?: number | null
+          updated_at?: string
+          updated_by_discord_id?: string | null
+          wards_placed?: number | null
+        }
+        Update: {
+          ally_healing?: number | null
+          assists?: number
+          created_at?: string
+          damage_mitigated?: number | null
+          damage_taken?: number | null
+          deaths?: number
+          god_id?: string | null
+          gpm?: number | null
+          id?: string
+          jungle_damage?: number | null
+          kills?: number
+          minion_damage?: number | null
+          player_damage?: number | null
+          player_id?: string | null
+          player_level?: number | null
+          raw_ign?: string
+          role?: string | null
+          scouter_game_id?: string
+          self_healing?: number | null
+          side?: string
+          structure_damage?: number | null
+          updated_at?: string
+          updated_by_discord_id?: string | null
+          wards_placed?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scouter_game_participants_god_id_fkey"
+            columns: ["god_id"]
+            isOneToOne: false
+            referencedRelation: "gods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scouter_game_participants_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scouter_game_participants_scouter_game_id_fkey"
+            columns: ["scouter_game_id"]
+            isOneToOne: false
+            referencedRelation: "scouter_games"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scouter_games: {
+        Row: {
+          created_at: string
+          details_image_path: string
+          game_mode: string | null
+          game_ordinal: number
+          id: string
+          match_length_seconds: number | null
+          scoreboard_image_path: string
+          scouter_match_id: string
+          smite_match_id: string | null
+          winning_side: string | null
+        }
+        Insert: {
+          created_at?: string
+          details_image_path: string
+          game_mode?: string | null
+          game_ordinal: number
+          id?: string
+          match_length_seconds?: number | null
+          scoreboard_image_path: string
+          scouter_match_id: string
+          smite_match_id?: string | null
+          winning_side?: string | null
+        }
+        Update: {
+          created_at?: string
+          details_image_path?: string
+          game_mode?: string | null
+          game_ordinal?: number
+          id?: string
+          match_length_seconds?: number | null
+          scoreboard_image_path?: string
+          scouter_match_id?: string
+          smite_match_id?: string | null
+          winning_side?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scouter_games_scouter_match_id_fkey"
+            columns: ["scouter_match_id"]
+            isOneToOne: false
+            referencedRelation: "scouter_matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scouter_matches: {
+        Row: {
+          created_at: string
+          hosted_at: string
+          hosted_by_discord_id: string
+          id: string
+          notes: string | null
+          season_id: string
+        }
+        Insert: {
+          created_at?: string
+          hosted_at?: string
+          hosted_by_discord_id: string
+          id?: string
+          notes?: string | null
+          season_id: string
+        }
+        Update: {
+          created_at?: string
+          hosted_at?: string
+          hosted_by_discord_id?: string
+          id?: string
+          notes?: string | null
+          season_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scouter_matches_season_id_fkey"
+            columns: ["season_id"]
+            isOneToOne: false
+            referencedRelation: "seasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       season_orgs: {
         Row: {
           created_at: string
@@ -1640,6 +1885,38 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_operation_outbox: {
+        Args: { p_limit?: number; p_worker_id: string }
+        Returns: {
+          aggregate_id: string
+          aggregate_type: string
+          attempts: number
+          available_at: string
+          completed_at: string | null
+          created_at: string
+          deduplication_key: string
+          event_type: string
+          external_id: string | null
+          id: string
+          last_error: string | null
+          lease_expires_at: string | null
+          lease_owner: string | null
+          payload: Json
+          state: string
+          topic: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "operation_outbox"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      clear_preseason_assignments: {
+        Args: { p_season_id: string }
+        Returns: Json
+      }
       complete_god_draft: {
         Args: {
           p_bans: Json
@@ -1651,11 +1928,100 @@ export type Database = {
         }
         Returns: undefined
       }
+      complete_operation_outbox: {
+        Args: {
+          p_external_id?: string
+          p_outbox_id: string
+          p_worker_id: string
+        }
+        Returns: Json
+      }
+      create_pending_action: {
+        Args: {
+          p_division_id: string
+          p_match_id: string
+          p_payload: Json
+          p_requested_by_discord_id: string
+          p_type: string
+        }
+        Returns: Json
+      }
+      enqueue_operation_outbox: {
+        Args: {
+          p_aggregate_id: string
+          p_aggregate_type: string
+          p_deduplication_key: string
+          p_event_type: string
+          p_payload?: Json
+          p_topic: string
+        }
+        Returns: string
+      }
+      fail_operation_outbox: {
+        Args: {
+          p_error: string
+          p_outbox_id: string
+          p_retry_after_seconds?: number
+          p_worker_id: string
+        }
+        Returns: Json
+      }
+      ingest_scouter_game: {
+        Args: {
+          p_details_image_path: string
+          p_game_mode?: string
+          p_game_ordinal: number
+          p_hosted_by_discord_id: string
+          p_match_length_seconds?: number
+          p_participants: Json
+          p_scoreboard_image_path: string
+          p_scouter_match_id?: string
+          p_season_id: string
+          p_smite_match_id?: string
+          p_winning_side: string
+        }
+        Returns: Json
+      }
       replace_match_report_stats: {
         Args: { p_match_report_id: string; p_rows: Json }
         Returns: undefined
       }
       replace_standings: { Args: { p_rows: Json }; Returns: undefined }
+      resolve_match_report_review: {
+        Args: {
+          p_actor_discord_id: string
+          p_games: Json
+          p_match_report_id: string
+        }
+        Returns: Json
+      }
+      resolve_pending_action: {
+        Args: {
+          p_action_id: string
+          p_actor_discord_id: string
+          p_decision: string
+          p_note?: string
+        }
+        Returns: Json
+      }
+      resolve_pending_stat_record: {
+        Args: {
+          p_actor_discord_id: string
+          p_decision: string
+          p_note?: string
+          p_record_id: string
+        }
+        Returns: Json
+      }
+      resolve_registration_review: {
+        Args: {
+          p_actor_discord_id: string
+          p_decision: string
+          p_registration_id: string
+          p_reviewer_note?: string
+        }
+        Returns: Json
+      }
       set_current_season: {
         Args: { p_season_id: string }
         Returns: {

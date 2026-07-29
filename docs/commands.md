@@ -13,16 +13,18 @@ handlers, database contracts, permissions, and deployment configuration ship.
 
 ## Current Quick Reference
 
-| Command                 | Who      | What it does                                                                                                                 |
-| ----------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `/report-result`        | Captains | Report a completed match's score. Posts a public receipt, opens a proof-upload thread, and sends the result to admin review. |
-| `/reschedule`           | Captains | Request a new date/time for an upcoming match. Posts a public receipt and sends the request to admin review.                 |
-| `/request-admin-review` | Everyone | Escalate an issue (score dispute, scheduling, eligibility, other) directly to admins. No public receipt.                     |
-| `/rules`                | Everyone | Ask a question about the league ruleset. Answered by an AI assistant restricted to the official rules text.                  |
-| `/update-ign`           | Everyone | Request an in-game name change with screenshot proof. **Not yet implemented** — replies asking you to see an admin for now.  |
-| `/division-role-config` | Admins   | Map a division (`solar`/`lunar`/`terra`) to a Discord role, or list current mappings.                                        |
-| `/division-sync`        | Admins   | Bulk-link players' Discord accounts and sync division roles from a roster CSV. Preview, then apply.                          |
-| `/help`                 | Everyone | Show this list with a link to the full reference.                                                                            |
+| Command                 | Who               | What it does                                                                                                                 |
+| ----------------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `/report-result`        | Captains          | Report a completed match's score. Posts a public receipt, opens a proof-upload thread, and sends the result to admin review. |
+| `/reschedule`           | Captains          | Request a new date/time for an upcoming match. Posts a public receipt and sends the request to admin review.                 |
+| `/request-admin-review` | Everyone          | Escalate an issue (score dispute, scheduling, eligibility, other) directly to admins. No public receipt.                     |
+| `/rules`                | Everyone          | Ask a question about the league ruleset. Answered by an AI assistant restricted to the official rules text.                  |
+| `/update-ign`           | Everyone          | Request an in-game name change with screenshot proof. **Not yet implemented** — replies asking you to see an admin for now.  |
+| `/division-role-config` | Admins            | Map a division (`solar`/`lunar`/`terra`) to a Discord role, or list current mappings.                                        |
+| `/division-sync`        | Admins            | Bulk-link players' Discord accounts and sync division roles from a roster CSV. Preview, then apply.                          |
+| `/log-scouter`          | Captains / Admins | Upload SCOREBOARD and DETAILS screenshots, OCR each game, and turn the public upload message into the final scouter receipt. |
+| `/profile`              | Everyone          | View scouter totals for yourself or another Discord-linked player, switch seasons, and open the full site profile.           |
+| `/help`                 | Everyone          | Show this list with a link to the full reference.                                                                            |
 
 "Captains" means a `players` row with `is_captain = true` and `discord_id` linked to the caller. "Admins" means a row in `admin_users`.
 
@@ -168,7 +170,10 @@ transaction messages, such as `FF`, `TC`, or `EV`.
 
 **Flow:** takes a free-text `question`, sends it plus the full ruleset text to OpenRouter with a system prompt that restricts answers to that ruleset, and returns the answer in an embed citing the section(s) used.
 
-Requires `OPENROUTER_API_KEY` (and optionally `OPENROUTER_MODEL`, default `google/gemini-2.0-flash-001`). Without a working key, the command fails gracefully with a message telling the user to ask an admin directly.
+Requires `OPENROUTER_API_KEY`. `OPENROUTER_MODEL_RULES` selects the text model
+for this command; it falls back to the legacy `OPENROUTER_MODEL`, then
+`google/gemini-2.0-flash-001`. Without a working key, the command fails
+gracefully with a message telling the user to ask an admin directly.
 
 ### `/update-ign`
 
@@ -200,6 +205,26 @@ Intended flow, per the code's own comments (`apps/bot/src/commands/update-ign.ts
 ### `/help`
 
 Posts the Quick Reference table above as an embed, plus a link to this document on GitHub.
+
+### `/log-scouter`
+
+**Who:** Current-season captains or SAL admins.
+
+**Flow:** Run the command in the channel where the permanent receipt should live. The optional `games` value defaults to 2 (maximum 5). SALBot posts one public, host-locked upload message. For each game, the host opens a modal and uploads the matching SMITE 2 **SCOREBOARD** and **DETAILS** screenshots.
+
+SALBot copies both originals to the `match-screenshots` audit bucket, calls sal-site with the existing internal bearer token, and waits for OCR plus the atomic database write. After each successful game, the same public message advances to the next upload. After the last game it becomes the final receipt, includes winners and player-link counts, attaches all original screenshots, links to the sal-site receipt, and receives a ✅ reaction.
+
+Structurally invalid OCR output is returned privately to the host with the raw model response and writes no game. A repeated SMITE match ID links the existing receipt and does not write a duplicate. Unrecognized IGNs are recorded as unlinked participants and listed on the receipt for follow-up.
+
+Requires `SAL_SITE_URL` and `SAL_SITE_INTERNAL_TOKEN`; the token must match sal-site's `INTERNAL_SERVICE_TOKEN`.
+
+### `/profile`
+
+**Who:** Everyone with access to bot commands.
+
+**Flow:** Run `/profile` for yourself, or provide the optional `player` Discord user. SALBot resolves the linked SAL player and returns an ephemeral scouter summary for the canonical current active or pre-season season: games, W-L, average KDA, and average damage. Use the season dropdown to switch among seasons where that player has scouter games. The **Scouters** button opens the selected season on the player's sal-site profile for the per-game table.
+
+Requires `SAL_SITE_URL` for the full-profile deep link.
 
 ---
 

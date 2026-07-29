@@ -156,4 +156,13 @@ describe("approvePendingStatRecord", () => {
     expect(state.playerStats).toHaveLength(1);
     expect(Array.from(state.playerStats.keys())).toEqual(["match-1|player-1|1"]);
   });
+
+  it("rejects a non-object stats JSON payload before writing player stats", async () => {
+    const state = makeState({ stats_json: [] as never });
+
+    await expect(
+      approvePendingStatRecord(makeDb(state) as never, "pending-1", "admin-1"),
+    ).rejects.toThrow("stats_json must be a JSON object");
+    expect(state.playerStats).toHaveLength(0);
+  });
 });
