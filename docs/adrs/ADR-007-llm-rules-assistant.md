@@ -73,7 +73,9 @@ an advisory answer from being mistaken for an official ruling.
 
 ## Consequences
 
-- `OPENROUTER_API_KEY` and `OPENROUTER_MODEL` are required in production for `/rules` to function
+- `OPENROUTER_API_KEY` is required in production for `/rules` to function;
+  `OPENROUTER_MODEL_RULES` selects its text model and falls back to the legacy
+  `OPENROUTER_MODEL`, then the committed default
 - The command degrades gracefully if the key is missing (ephemeral error)
 - Admins maintain the ruleset by editing `docs/rules/ruleset.md` and `docs/rules/edge-cases.md`
 - Cost is bounded: the ruleset is static, so OpenRouter prompt caching applies on supported models

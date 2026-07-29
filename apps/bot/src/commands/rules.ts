@@ -42,7 +42,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
   try {
     const ruleset = getRuleset();
-    const answer = await askOpenRouter(SYSTEM_PROMPT_TEMPLATE(ruleset), question);
+    const answer = await askOpenRouter('rules-qa', SYSTEM_PROMPT_TEMPLATE(ruleset), question);
 
     await interaction.editReply({
       embeds: [
