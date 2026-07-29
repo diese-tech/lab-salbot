@@ -1,11 +1,21 @@
 import { Client, GatewayIntentBits } from 'discord.js';
 import type { ChatInputCommandInteraction } from 'discord.js';
-import { isAdminUser } from '@salbot/db';
+import { randomUUID } from 'node:crypto';
+import { hostname } from 'node:os';
+import {
+  claimOperationOutbox,
+  completeOperationOutbox,
+  failOperationOutbox,
+  isAdminUser,
+} from '@salbot/db';
 import { db } from './lib/db';
 import { validateRequiredEnv, warnOnMissingChannelEnv } from './lib/config';
 import { subscribeToGodDraftRecaps } from './lib/god-draft-recap';
 import { handleProofUpload, activeProofThreads } from './lib/proof-thread';
 import { toUserMessage } from './lib/errors';
+import { createOutboxProjector } from './lib/outbox-projections';
+import { registerOutboxDrain } from './lib/outbox-runtime';
+import { OperationOutboxWorker } from './lib/outbox-worker';
 
 // Command modules
 import * as reportResult from './commands/report-result';
@@ -61,6 +71,25 @@ const client = new Client({
   ],
 });
 
+const outboxWorker = new OperationOutboxWorker(
+  {
+    claim: (workerId, limit) => claimOperationOutbox(db, workerId, limit),
+    project: createOutboxProjector(client, db),
+    complete: (outboxId, workerId, externalId) =>
+      completeOperationOutbox(db, outboxId, workerId, externalId),
+    fail: (outboxId, workerId, error, retryAfterSeconds) =>
+      failOperationOutbox(db, outboxId, workerId, error, retryAfterSeconds),
+    log: (level, event, details = {}) => {
+      const message = JSON.stringify({ component: 'operation_outbox', event, ...details });
+      if (level === 'error') console.error(message);
+      else if (level === 'warn') console.warn(message);
+      else console.log(message);
+    },
+  },
+  { workerId: `${hostname()}:${process.pid}:${randomUUID()}` },
+);
+registerOutboxDrain(() => outboxWorker.drainNow());
+
 // ── Process-level safety handlers ──────────────────────────────────────────────
 // Log-and-continue on unhandled rejections so a stray rejected promise doesn't
 // take the whole bot down (Node >=15 terminates the process by default).
@@ -71,17 +100,19 @@ process.on('unhandledRejection', (reason) => {
 // Graceful shutdown on SIGTERM (e.g. Railway redeploys killing the process mid-operation).
 process.on('SIGTERM', async () => {
   console.log('[bot] SIGTERM received, shutting down...');
+  await outboxWorker.stop();
   await client.destroy();
   process.exit(0);
 });
 
-client.once('ready', () => {
+client.once('ready', async () => {
   console.log(`[bot] Ready as ${client.user?.tag}`);
   console.log(`[bot] Loaded commands: ${[...commands.keys()].join(', ')}`);
   console.log('[bot] Required intents: Guilds, GuildMembers, GuildMessages, MessageContent');
   console.log('[bot] Required permissions: Manage Roles for /division-sync role updates');
   console.log(`[bot] Admin review channel: ${process.env.CHANNEL_ADMIN_REVIEW ?? 'NOT SET'}`);
   subscribeToGodDraftRecaps(client, db);
+  await outboxWorker.start();
 });
 
 // ── Interaction handler ────────────────────────────────────────────────────────────
