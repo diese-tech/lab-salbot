@@ -170,7 +170,10 @@ transaction messages, such as `FF`, `TC`, or `EV`.
 
 **Flow:** takes a free-text `question`, sends it plus the full ruleset text to OpenRouter with a system prompt that restricts answers to that ruleset, and returns the answer in an embed citing the section(s) used.
 
-Requires `OPENROUTER_API_KEY` (and optionally `OPENROUTER_MODEL`, default `google/gemini-2.0-flash-001`). Without a working key, the command fails gracefully with a message telling the user to ask an admin directly.
+Requires `OPENROUTER_API_KEY`. `OPENROUTER_MODEL_RULES` selects the text model
+for this command; it falls back to the legacy `OPENROUTER_MODEL`, then
+`google/gemini-2.0-flash-001`. Without a working key, the command fails
+gracefully with a message telling the user to ask an admin directly.
 
 ### `/update-ign`
 

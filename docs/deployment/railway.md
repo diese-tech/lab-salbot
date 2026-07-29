@@ -63,8 +63,12 @@ Required for all current result, reschedule, and review workflows:
 Feature-specific variables:
 
 - `SAL_SITE_URL` and `SAL_SITE_INTERNAL_TOKEN` enable standings recalculation.
-- `OPENROUTER_API_KEY` enables `/rules`; `OPENROUTER_MODEL` overrides its
-  default model.
+- `OPENROUTER_API_KEY` enables `/rules`; `OPENROUTER_MODEL_RULES` selects its
+  cheap/free text model. Task-specific model variables fall back to the legacy
+  `OPENROUTER_MODEL`, then the committed default.
+- `OPENROUTER_MODEL_VISION` reserves a multimodal model for image extraction.
+  The current scouter OCR call runs in sal-site, where the same variable must
+  be configured.
 
 The process fails fast when a startup-required variable is absent. Missing
 channel variables are logged at startup and fail only the affected workflow.
