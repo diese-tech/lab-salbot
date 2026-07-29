@@ -16,6 +16,7 @@ import * as rules from './commands/rules';
 import * as divisionRoleConfig from './commands/division-role-config';
 import * as divisionSync from './commands/division-sync';
 import * as logScouter from './commands/log-scouter';
+import * as profile from './commands/profile';
 import * as help from './commands/help';
 
 // Approval handlers
@@ -44,6 +45,7 @@ const commands = new Map<string, CommandModule>([
   [divisionRoleConfig.data.name, divisionRoleConfig],
   [divisionSync.data.name, divisionSync],
   [logScouter.data.name, logScouter],
+  [profile.data.name, profile],
   [help.data.name, help],
 ]);
 
@@ -102,6 +104,8 @@ client.on('interactionCreate', async (interaction) => {
         await reportResult.handleWinnerSelect(interaction);
       } else if (id === 'rs_match') {
         await reschedule.handleMatchSelect(interaction);
+      } else if (id.startsWith('profile_season:')) {
+        await profile.handleSeasonSelect(interaction);
       }
       return;
     }
