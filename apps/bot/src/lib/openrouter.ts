@@ -1,10 +1,35 @@
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const DEFAULT_OPENROUTER_MODEL = 'google/gemini-2.0-flash-001';
 
-export async function askOpenRouter(systemPrompt: string, userQuestion: string): Promise<string> {
+export type OpenRouterTask = 'rules-qa' | 'image-extract';
+
+const TASK_MODEL_ENV: Record<OpenRouterTask, 'OPENROUTER_MODEL_RULES' | 'OPENROUTER_MODEL_VISION'> = {
+  'rules-qa': 'OPENROUTER_MODEL_RULES',
+  'image-extract': 'OPENROUTER_MODEL_VISION',
+};
+
+function configuredModel(name: string): string | undefined {
+  const value = process.env[name]?.trim();
+  return value || undefined;
+}
+
+export function getOpenRouterModel(task: OpenRouterTask): string {
+  return (
+    configuredModel(TASK_MODEL_ENV[task]) ??
+    configuredModel('OPENROUTER_MODEL') ??
+    DEFAULT_OPENROUTER_MODEL
+  );
+}
+
+export async function askOpenRouter(
+  task: OpenRouterTask,
+  systemPrompt: string,
+  userQuestion: string,
+): Promise<string> {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) throw new Error('OPENROUTER_API_KEY is not set');
 
-  const model = process.env.OPENROUTER_MODEL ?? 'google/gemini-2.0-flash-001';
+  const model = getOpenRouterModel(task);
 
   const response = await fetch(OPENROUTER_API_URL, {
     method: 'POST',
