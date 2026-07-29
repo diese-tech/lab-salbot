@@ -15,8 +15,11 @@ import {
   approvePendingStatRecord,
   rejectPendingStatRecord,
 } from '@salbot/db';
-import { parseScore } from '@salbot/shared';
-import type { MatchResultPayload, ReschedulePayload } from '@salbot/shared';
+import {
+  parseMatchResultPayload,
+  parseReschedulePayload,
+  parseScore,
+} from '@salbot/shared';
 import { db } from '../lib/db';
 import { getAdminReviewChannelId, getResultsChannelId, getReschedulesChannelId } from '../lib/channels';
 import {
@@ -33,15 +36,23 @@ import { triggerStandingsRecalculation } from '../lib/standings-sync';
 export async function handleApproveButton(interaction: ButtonInteraction, pendingActionId: string) {
   await interaction.deferReply({ ephemeral: true });
 
-  const claimed = await claimPendingActionForApproval(db, pendingActionId, interaction.user.id);
-  if (!claimed) {
-    await interaction.editReply('This action was already processed by another admin.');
+  let pendingAction: NonNullable<Awaited<ReturnType<typeof getPendingAction>>>;
+  try {
+    const loaded = await getPendingAction(db, pendingActionId);
+    if (!loaded) {
+      await interaction.editReply('Pending action not found.');
+      return;
+    }
+    pendingAction = loaded;
+  } catch (err) {
+    console.error('[approval] invalid pending action:', err);
+    await interaction.editReply('This pending action contains invalid data and was not claimed.');
     return;
   }
 
-  const pendingAction = await getPendingAction(db, pendingActionId);
-  if (!pendingAction) {
-    await interaction.editReply('Pending action not found.');
+  const claimed = await claimPendingActionForApproval(db, pendingActionId, interaction.user.id);
+  if (!claimed) {
+    await interaction.editReply('This action was already processed by another admin.');
     return;
   }
 
@@ -262,7 +273,7 @@ async function approveMatchResult(
   interaction: ButtonInteraction,
   pendingAction: NonNullable<Awaited<ReturnType<typeof getPendingAction>>>
 ): Promise<{ applied: boolean; note?: string }> {
-  const payload = pendingAction.payload_json as unknown as MatchResultPayload;
+  const payload = parseMatchResultPayload(pendingAction.payload_json);
   const match = await getMatchById(db, pendingAction.match_id!);
   if (!match) throw new Error(`Match ${pendingAction.match_id} not found`);
 
@@ -324,7 +335,7 @@ async function approveReschedule(
   interaction: ButtonInteraction,
   pendingAction: NonNullable<Awaited<ReturnType<typeof getPendingAction>>>
 ): Promise<{ applied: boolean; note?: string }> {
-  const payload = pendingAction.payload_json as unknown as ReschedulePayload;
+  const payload = parseReschedulePayload(pendingAction.payload_json);
   const match = await getMatchById(db, pendingAction.match_id!);
   if (!match) throw new Error(`Match ${pendingAction.match_id} not found`);
 

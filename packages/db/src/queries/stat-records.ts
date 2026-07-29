@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '../client';
+import { parseDatabaseJsonObject } from '../json';
 
 function extractNumber(
   json: Record<string, unknown> | null | undefined,
@@ -25,14 +26,14 @@ export async function getPendingStatRecord(db: SupabaseClient, id: string) {
     .eq('id', id)
     .single();
 
-  if (error) return null;
-  return data as {
+  if (error || !data) return null;
+  const row = data as unknown as {
     id: string;
     match_id: string;
     player_id: string | null;
     screenshot_url: string;
-    extracted_json: Record<string, unknown>;
-    stats_json: Record<string, unknown> | null;
+    extracted_json: unknown;
+    stats_json: unknown;
     confidence: number;
     source: string;
     status: string;
@@ -41,7 +42,14 @@ export async function getPendingStatRecord(db: SupabaseClient, id: string) {
     correction_note: string | null;
     created_at: string;
     updated_at: string;
-  } | null;
+  };
+  return {
+    ...row,
+    extracted_json: parseDatabaseJsonObject(row.extracted_json, 'extracted_json'),
+    stats_json: row.stats_json === null
+      ? null
+      : parseDatabaseJsonObject(row.stats_json, 'stats_json'),
+  };
 }
 
 /**
@@ -67,13 +75,23 @@ export async function approvePendingStatRecord(
 
   if (recordErr || !raw) throw new Error(`Pending stat record ${pendingStatRecordId} not found`);
 
-  const record = raw as {
+  const recordRow = raw as unknown as {
     id: string;
     match_id: string;
     player_id: string;
-    stats_json: Record<string, unknown> | null;
-    extracted_json: Record<string, unknown>;
+    stats_json: unknown;
+    extracted_json: unknown;
     status: string;
+  };
+  const record = {
+    ...recordRow,
+    stats_json: recordRow.stats_json === null
+      ? null
+      : parseDatabaseJsonObject(recordRow.stats_json, 'stats_json'),
+    extracted_json: parseDatabaseJsonObject(
+      recordRow.extracted_json,
+      'extracted_json',
+    ),
   };
 
   if (record.status !== 'pending') {
