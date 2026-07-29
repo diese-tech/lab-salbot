@@ -7,3 +7,4 @@ export * from './stat-records';
 export * from './god-draft';
 export * from './divisions';
 export * from './division-role-mappings';
+export * from './scouters';

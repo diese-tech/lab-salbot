@@ -17,6 +17,7 @@ const COMMAND_LIST = [
   ['/update-ign', 'Everyone', 'Request an in-game name change. *(Not yet implemented — ask an admin for now.)*'],
   ['/division-role-config', 'Admins', 'Map a division to a Discord role, or list mappings.'],
   ['/division-sync', 'Admins', "Bulk-sync players' Discord identity and division roles from a CSV."],
+  ['/log-scouter', 'Captains / Admins', 'Upload SMITE 2 screenshots and record a public scouter receipt.'],
   ['/help', 'Everyone', 'Show this list.'],
 ] as const;
 
