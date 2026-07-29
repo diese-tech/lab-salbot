@@ -51,6 +51,8 @@ export class OperationOutboxWorker {
   private lastSuccessfulDrainAt: string | null = null;
   private lastError: string | null = null;
   private observedDeadLetters = 0;
+  private readonly activeRows = new Map<string, OperationOutboxRow>();
+  private readonly releasedRows = new Set<string>();
 
   constructor(
     private readonly dependencies: OutboxWorkerDependencies,
@@ -69,11 +71,25 @@ export class OperationOutboxWorker {
     this.scheduleNextDrain();
   }
 
-  async stop(): Promise<void> {
+  async stop(timeoutMs?: number): Promise<void> {
     this.stopped = true;
     if (this.timer) clearTimeout(this.timer);
     this.timer = undefined;
-    await this.activeDrain;
+    if (!this.activeDrain) return;
+    if (timeoutMs === undefined) {
+      await this.activeDrain;
+      return;
+    }
+
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const completed = await Promise.race([
+      this.activeDrain.then(() => true),
+      new Promise<boolean>((resolve) => {
+        timer = setTimeout(() => resolve(false), timeoutMs);
+      }),
+    ]);
+    if (timer) clearTimeout(timer);
+    if (!completed) await this.releaseActiveRows();
   }
 
   drainNow(): Promise<void> {
@@ -125,6 +141,7 @@ export class OperationOutboxWorker {
   }
 
   private async processRow(row: OperationOutboxRow): Promise<void> {
+    this.activeRows.set(row.id, row);
     const ageMs = Math.max(0, this.now().getTime() - Date.parse(row.created_at));
     this.dependencies.log('info', 'outbox_claimed', {
       outboxId: row.id,
@@ -135,6 +152,7 @@ export class OperationOutboxWorker {
 
     try {
       const externalId = await this.dependencies.project(row);
+      if (this.releasedRows.has(row.id)) return;
       await this.dependencies.complete(row.id, this.options.workerId, externalId);
       this.dependencies.log('info', 'outbox_completed', {
         outboxId: row.id,
@@ -144,6 +162,7 @@ export class OperationOutboxWorker {
         externalId: externalId ?? null,
       });
     } catch (error) {
+      if (this.releasedRows.has(row.id)) return;
       const message = errorMessage(error);
       const retryAfterSeconds = getRetryDelaySeconds(row.attempts, this.random);
       try {
@@ -171,10 +190,58 @@ export class OperationOutboxWorker {
           projectionError: message,
         });
       }
+    } finally {
+      this.activeRows.delete(row.id);
+      this.releasedRows.delete(row.id);
     }
+  }
+
+  private async releaseActiveRows(): Promise<void> {
+    await Promise.all([...this.activeRows.values()].map(async (row) => {
+      this.releasedRows.add(row.id);
+      try {
+        await withTimeout(
+          this.dependencies.fail(
+            row.id,
+            this.options.workerId,
+            'Worker shutdown released the active lease.',
+            0,
+          ),
+          2_000,
+          'Timed out releasing the outbox lease during shutdown.',
+        );
+        this.dependencies.log('warn', 'outbox_lease_released', {
+          outboxId: row.id,
+          topic: row.topic,
+          attempts: row.attempts,
+        });
+      } catch (error) {
+        this.dependencies.log('error', 'outbox_lease_release_failed', {
+          outboxId: row.id,
+          topic: row.topic,
+          error: errorMessage(error),
+        });
+      }
+    }));
   }
 }
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), timeoutMs);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
 }

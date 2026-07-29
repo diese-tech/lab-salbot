@@ -3,6 +3,7 @@ import {
   claimOperationOutbox,
   completeOperationOutbox,
   failOperationOutbox,
+  getOperationOutboxHealth,
   resolvePendingAction,
   resolvePendingStatRecord,
 } from "./operation-outbox";
@@ -115,6 +116,33 @@ describe("operation outbox RPCs", () => {
       p_worker_id: "worker-1",
       p_error: "network down",
       p_retry_after_seconds: 20,
+    });
+  });
+
+  it("reports dead letters and the oldest active event", async () => {
+    const deadLetters = {
+      select: () => deadLetters,
+      eq: () => Promise.resolve({ count: 2, error: null }),
+    };
+    const oldest = {
+      select: () => oldest,
+      in: () => oldest,
+      order: () => oldest,
+      limit: () => oldest,
+      maybeSingle: () => Promise.resolve({
+        data: { created_at: "2026-07-29T00:00:00.000Z" },
+        error: null,
+      }),
+    };
+    const db = {
+      from: vi.fn()
+        .mockReturnValueOnce(deadLetters)
+        .mockReturnValueOnce(oldest),
+    } as never;
+
+    await expect(getOperationOutboxHealth(db)).resolves.toEqual({
+      deadLetterCount: 2,
+      oldestPendingAt: "2026-07-29T00:00:00.000Z",
     });
   });
 });

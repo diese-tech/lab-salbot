@@ -100,6 +100,29 @@ describe('OperationOutboxWorker', () => {
 
     expect(deps.claim).toHaveBeenCalledTimes(1);
   });
+
+  it('releases an active lease when shutdown cannot finish in time', async () => {
+    let releaseProjection!: () => void;
+    const project = vi.fn().mockImplementation(() => new Promise<void>((resolve) => {
+      releaseProjection = resolve;
+    }));
+    const deps = dependencies({ project });
+    const worker = new OperationOutboxWorker(deps, { workerId: 'worker-1' });
+
+    const drain = worker.drainNow();
+    await vi.waitFor(() => expect(project).toHaveBeenCalled());
+    await worker.stop(1);
+    releaseProjection();
+    await drain;
+
+    expect(deps.fail).toHaveBeenCalledWith(
+      'outbox-1',
+      'worker-1',
+      'Worker shutdown released the active lease.',
+      0,
+    );
+    expect(deps.complete).not.toHaveBeenCalled();
+  });
 });
 
 describe('getRetryDelaySeconds', () => {

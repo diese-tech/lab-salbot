@@ -60,7 +60,7 @@ clean teardown, or a live Discord flow.
 | `SAL-OPS-02` | Transactional decision RPCs and the five-second lease worker are implemented. Database tests cover disjoint claims, expired-lease recovery, stale cancellation, terminal replay, rollback, and dead-letter behavior; the live projection smoke remains part of deployment acceptance. | [#42](https://github.com/diese-tech/lab-salbot/issues/42) |
 | `SAL-DEPLOY-01` | Container/Railway contract and CI image proof landed in #50/#49; Railway staging acceptance remains open. | [#43](https://github.com/diese-tech/lab-salbot/issues/43) |
 | `SAL-GOV-01` | This repository-specific status, ownership, security, licensing, and update policy is supplied by #48; remote protection is already verified. | [#44](https://github.com/diese-tech/lab-salbot/issues/44) |
-| `SAL-DEPLOY-01` | Open: add truthful readiness health, database/outbox checks, and clean SIGTERM acceptance. | [#45](https://github.com/diese-tech/lab-salbot/issues/45) |
+| `SAL-DEPLOY-01` | `/healthz`, database/outbox readiness, command drain, bounded lease release, and clean SIGTERM code are implemented. Railway staging transition, singleton, and termination evidence remains open. | [#45](https://github.com/diese-tech/lab-salbot/issues/45) |
 
 ## Shared platform gates
 

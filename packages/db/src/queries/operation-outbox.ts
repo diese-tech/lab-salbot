@@ -183,3 +183,27 @@ export async function failOperationOutbox(
   const result = objectResult(data, "fail_operation_outbox");
   return { state: requiredString(result.state, "fail_operation_outbox") };
 }
+
+export async function getOperationOutboxHealth(
+  db: SupabaseClient,
+): Promise<{ deadLetterCount: number; oldestPendingAt: string | null }> {
+  const { count, error: countError } = await db
+    .from("operation_outbox")
+    .select("id", { count: "exact", head: true })
+    .eq("state", "dead_letter");
+  if (countError) throw countError;
+
+  const { data, error: oldestError } = await db
+    .from("operation_outbox")
+    .select("created_at")
+    .in("state", ["pending", "processing"])
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (oldestError) throw oldestError;
+
+  return {
+    deadLetterCount: count ?? 0,
+    oldestPendingAt: data?.created_at ?? null,
+  };
+}
