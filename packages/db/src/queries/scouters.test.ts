@@ -2,10 +2,14 @@ import { describe, expect, it } from "vitest";
 import { getCurrentScouterSeason, getScouterMatchReceipt } from "./scouters";
 
 describe("scouter queries", () => {
-  it("selects the most recent active or pre-season season", async () => {
+  it("selects the canonical current active or pre-season season", async () => {
     const calls: Array<[string, unknown]> = [];
     const builder = {
       select: () => builder,
+      eq: (column: string, value: unknown) => (
+        calls.push([column, value]),
+        builder
+      ),
       in: (column: string, values: string[]) => (
         calls.push([column, values]),
         builder
@@ -37,8 +41,7 @@ describe("scouter queries", () => {
       id: "preseason2",
     });
     expect(calls).toContainEqual(["status", ["active", "pre-season"]]);
-    expect(calls).toContainEqual(["start_date", { ascending: false }]);
-    expect(calls).toContainEqual(["limit", 1]);
+    expect(calls).toContainEqual(["is_current", true]);
   });
 
   it("loads games and participants from Supabase for a public receipt", async () => {

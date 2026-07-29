@@ -24,6 +24,7 @@ async function main() {
     divisionRoleConfig,
     divisionSync,
     logScouter,
+    profile,
     help,
   ] = await Promise.all([
     import('../src/commands/report-result'),
@@ -34,6 +35,7 @@ async function main() {
     import('../src/commands/division-role-config'),
     import('../src/commands/division-sync'),
     import('../src/commands/log-scouter'),
+    import('../src/commands/profile'),
     import('../src/commands/help'),
   ]);
 
@@ -46,6 +48,7 @@ async function main() {
     divisionRoleConfig.data,
     divisionSync.data,
     logScouter.data,
+    profile.data,
     help.data,
   ];
 

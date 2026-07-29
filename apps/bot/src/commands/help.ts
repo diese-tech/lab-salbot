@@ -18,6 +18,7 @@ const COMMAND_LIST = [
   ['/division-role-config', 'Admins', 'Map a division to a Discord role, or list mappings.'],
   ['/division-sync', 'Admins', "Bulk-sync players' Discord identity and division roles from a CSV."],
   ['/log-scouter', 'Captains / Admins', 'Upload SMITE 2 screenshots and record a public scouter receipt.'],
+  ['/profile', 'Everyone', "View your or another linked player's scouter stats."],
   ['/help', 'Everyone', 'Show this list.'],
 ] as const;
 

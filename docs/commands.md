@@ -23,6 +23,7 @@ handlers, database contracts, permissions, and deployment configuration ship.
 | `/division-role-config` | Admins            | Map a division (`solar`/`lunar`/`terra`) to a Discord role, or list current mappings.                                        |
 | `/division-sync`        | Admins            | Bulk-link players' Discord accounts and sync division roles from a roster CSV. Preview, then apply.                          |
 | `/log-scouter`          | Captains / Admins | Upload SCOREBOARD and DETAILS screenshots, OCR each game, and turn the public upload message into the final scouter receipt. |
+| `/profile`              | Everyone          | View scouter totals for yourself or another Discord-linked player, switch seasons, and open the full site profile.           |
 | `/help`                 | Everyone          | Show this list with a link to the full reference.                                                                            |
 
 "Captains" means a `players` row with `is_captain = true` and `discord_id` linked to the caller. "Admins" means a row in `admin_users`.
@@ -213,6 +214,14 @@ SALBot copies both originals to the `match-screenshots` audit bucket, calls sal-
 Structurally invalid OCR output is returned privately to the host with the raw model response and writes no game. A repeated SMITE match ID links the existing receipt and does not write a duplicate. Unrecognized IGNs are recorded as unlinked participants and listed on the receipt for follow-up.
 
 Requires `SAL_SITE_URL` and `SAL_SITE_INTERNAL_TOKEN`; the token must match sal-site's `INTERNAL_SERVICE_TOKEN`.
+
+### `/profile`
+
+**Who:** Everyone with access to bot commands.
+
+**Flow:** Run `/profile` for yourself, or provide the optional `player` Discord user. SALBot resolves the linked SAL player and returns an ephemeral scouter summary for the canonical current active or pre-season season: games, W-L, average KDA, and average damage. Use the season dropdown to switch among seasons where that player has scouter games. The **Scouters** button opens the selected season on the player's sal-site profile for the per-game table.
+
+Requires `SAL_SITE_URL` for the full-profile deep link.
 
 ---
 
