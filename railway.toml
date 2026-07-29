@@ -20,5 +20,5 @@ restartPolicyMaxRetries = 10
 overlapSeconds = 0
 drainingSeconds = 30
 
-# No healthcheckPath is configured here. Readiness is tracked separately in
-# https://github.com/diese-tech/lab-salbot/issues/45.
+healthcheckPath = "/healthz"
+healthcheckTimeout = 120

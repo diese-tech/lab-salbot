@@ -6,6 +6,7 @@ import {
   claimOperationOutbox,
   completeOperationOutbox,
   failOperationOutbox,
+  getOperationOutboxHealth,
   isAdminUser,
 } from '@salbot/db';
 import { db } from './lib/db';
@@ -16,6 +17,9 @@ import { toUserMessage } from './lib/errors';
 import { createOutboxProjector } from './lib/outbox-projections';
 import { registerOutboxDrain } from './lib/outbox-runtime';
 import { OperationOutboxWorker } from './lib/outbox-worker';
+import { startHealthServer, type RunningHealthServer } from './lib/health-server';
+import { ReadinessMonitor } from './lib/readiness';
+import { createShutdownHandler } from './lib/shutdown';
 
 // Command modules
 import * as reportResult from './commands/report-result';
@@ -90,6 +94,24 @@ const outboxWorker = new OperationOutboxWorker(
 );
 registerOutboxDrain(() => outboxWorker.drainNow());
 
+const readiness = new ReadinessMonitor({
+  isDiscordReady: () => client.isReady(),
+  getOutboxStatus: () => outboxWorker.getStatus(),
+  checkDatabase: () => getOperationOutboxHealth(db),
+});
+let healthServer: RunningHealthServer | undefined;
+
+const shutdown = createShutdownHandler({
+  beginDrain: () => readiness.beginDrain(),
+  stopOutbox: () => outboxWorker.stop(25_000),
+  destroyDiscord: () => client.destroy(),
+  closeHealthServer: async () => {
+    if (healthServer) await healthServer.close();
+  },
+  exit: (code) => process.exit(code),
+  log: (message, error) => console.error(message, error),
+});
+
 // ── Process-level safety handlers ──────────────────────────────────────────────
 // Log-and-continue on unhandled rejections so a stray rejected promise doesn't
 // take the whole bot down (Node >=15 terminates the process by default).
@@ -98,11 +120,9 @@ process.on('unhandledRejection', (reason) => {
 });
 
 // Graceful shutdown on SIGTERM (e.g. Railway redeploys killing the process mid-operation).
-process.on('SIGTERM', async () => {
+process.on('SIGTERM', () => {
   console.log('[bot] SIGTERM received, shutting down...');
-  await outboxWorker.stop();
-  await client.destroy();
-  process.exit(0);
+  void shutdown();
 });
 
 client.once('ready', async () => {
@@ -119,6 +139,16 @@ client.once('ready', async () => {
 
 client.on('interactionCreate', async (interaction) => {
   try {
+    if (readiness.isDraining()) {
+      if (interaction.isRepliable()) {
+        await interaction.reply({
+          content: 'SALBot is restarting. Please retry in a moment.',
+          ephemeral: true,
+        });
+      }
+      return;
+    }
+
     // Slash commands
     if (interaction.isChatInputCommand()) {
       const cmd = commands.get(interaction.commandName);
@@ -205,16 +235,27 @@ client.on('interactionCreate', async (interaction) => {
 // ── Proof thread screenshot tracking (Phase 1 stub) ────────────────────────────────
 
 client.on('messageCreate', async (message) => {
+  if (readiness.isDraining()) return;
   if (message.author.bot || message.attachments.size === 0) return;
   if (!activeProofThreads.has(message.channelId)) return;
   await handleProofUpload(client, message.channelId, message.attachments.size);
 });
 
-client.login(process.env.DISCORD_TOKEN).catch((err) => {
-  // Login failures (bad/rotated DISCORD_TOKEN, auth/network issues at boot) are
-  // fatal, not the kind of stray rejection the unhandledRejection handler above
-  // is meant to absorb: without this, the process stays alive but never reaches
-  // 'ready', so a supervisor sees a live process instead of a restartable crash.
-  console.error('[bot] Fatal: failed to log in to Discord:', err);
-  process.exit(1);
-});
+const port = Number(process.env.PORT ?? '3000');
+if (!Number.isInteger(port) || port < 1 || port > 65_535) {
+  throw new Error('PORT must be an integer between 1 and 65535');
+}
+
+void startHealthServer(readiness, { port })
+  .then(async (server) => {
+    healthServer = server;
+    console.log(`[bot] Health server listening on port ${server.port}`);
+    await client.login(process.env.DISCORD_TOKEN);
+  })
+  .catch(async (error) => {
+    // Bind and login failures are fatal. A permanently non-ready process must
+    // exit so Railway can apply the configured restart policy.
+    console.error('[bot] Fatal startup failure:', error);
+    await healthServer?.close().catch(() => undefined);
+    process.exit(1);
+  });

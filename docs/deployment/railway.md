@@ -11,11 +11,12 @@ deployment contract is:
 - `node dist/index.js` as the only production process
 - restart on failure, with at most ten retries
 - zero configured deployment overlap and a 30-second SIGTERM drain window
+- `/healthz` on Railway's injected `PORT`, with a 120-second startup timeout
 
-The repository does not currently expose an HTTP readiness endpoint. Do not set
-a Railway health-check path until
-[`/healthz` issue #45](https://github.com/diese-tech/lab-salbot/issues/45) is
-implemented and deployed.
+`/healthz` returns 200 only after Discord is ready, the database probe succeeds,
+and the outbox worker completes its first claim. It returns 503 during startup,
+dependency loss, and shutdown drain. Responses contain only readiness flags and
+outbox counts/age, never credentials or raw dependency errors.
 
 ## Create or Reconfigure the Service
 
@@ -50,6 +51,8 @@ Required at process startup:
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
 
+Railway injects `PORT`; local runs default to `3000`.
+
 Required for all current result, reschedule, and review workflows:
 
 - `CHANNEL_ADMIN_REVIEW`
@@ -81,15 +84,20 @@ Run these checks in staging before promoting a deployment contract change:
 
 1. Verify the build log uses the committed Dockerfile, frozen pnpm install, and
    all three workspace builds.
-2. Verify the runtime log reaches `[bot] Ready as ...` once.
-3. Verify the first structured `operation_outbox` claim succeeds, including
+2. Confirm `/healthz` returns 503 before Discord/outbox initialization, then
+   transitions to 200 with all four readiness flags truthful.
+3. Verify the runtime log reaches `[bot] Ready as ...` once.
+4. Verify the first structured `operation_outbox` claim succeeds, including
    after restarting with a committed event waiting in the queue.
-4. Verify Railway shows one active deployment, one region, and one replica.
-5. Redeploy the same revision. Confirm the outgoing process logs its SIGTERM
+5. Verify Railway shows one active deployment, one region, and one replica.
+6. Redeploy the same revision. Confirm the outgoing process logs its SIGTERM
    shutdown and the deployment details report zero overlap.
-6. Run a read-only bot/database command, then one disposable Discord projection
+7. During drain, confirm `/healthz` returns 503, new commands are rejected, and
+   the process exits before Railway's 30-second SIGKILL deadline. If an active
+   projection exceeds 25 seconds, confirm its lease is released for retry.
+8. Run a read-only bot/database command, then one disposable Discord projection
    suitable for staging. Confirm there is exactly one response or message.
-7. Confirm an intentional process failure follows the ten-retry `ON_FAILURE`
+9. Confirm an intentional process failure follows the ten-retry `ON_FAILURE`
    policy, while a clean platform stop is not restarted as a crash.
 
 Record the deployment ID, commit SHA, timestamps, replica count, relevant log
