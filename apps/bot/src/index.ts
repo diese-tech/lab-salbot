@@ -15,6 +15,7 @@ import * as updateIgn from './commands/update-ign';
 import * as rules from './commands/rules';
 import * as divisionRoleConfig from './commands/division-role-config';
 import * as divisionSync from './commands/division-sync';
+import * as logScouter from './commands/log-scouter';
 import * as help from './commands/help';
 
 // Approval handlers
@@ -42,6 +43,7 @@ const commands = new Map<string, CommandModule>([
   [rules.data.name, rules],
   [divisionRoleConfig.data.name, divisionRoleConfig],
   [divisionSync.data.name, divisionSync],
+  [logScouter.data.name, logScouter],
   [help.data.name, help],
 ]);
 
@@ -106,6 +108,11 @@ client.on('interactionCreate', async (interaction) => {
 
     // Buttons
     if (interaction.isButton()) {
+      if (interaction.customId.startsWith('sc_up:')) {
+        await logScouter.handleUploadButton(interaction);
+        return;
+      }
+
       const [action, entityId] = interaction.customId.split(':');
 
       // Admin-only actions
@@ -141,6 +148,8 @@ client.on('interactionCreate', async (interaction) => {
       } else if (id.startsWith('modal_reject_stat:')) {
         const statRecordId = id.split(':')[1];
         await handleRejectStatModal(interaction, statRecordId);
+      } else if (id.startsWith('sc_modal:')) {
+        await logScouter.handleUploadModal(interaction);
       }
       return;
     }

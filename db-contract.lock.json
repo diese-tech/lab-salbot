@@ -1,7 +1,7 @@
 {
   "repository": "diese-tech/sal-database",
-  "release": "db-v1.2.0",
-  "commit": "195a0792a396354d7809d7dcbb85a9cdfd4d8030",
-  "migrationHead": "20260718022500",
-  "typesSha256": "sha256:f4eb7e088a8f072f2372df335e96382bc12885efa6aae1ef4f31ba1fd64f22c0"
+  "release": "db-v1.5.0",
+  "commit": "80948170d7855ecb9e3f7a93f373f91713c937ba",
+  "migrationHead": "20260729071000",
+  "typesSha256": "sha256:e18e9261d7a66cb0278cc674343e3011ccb1c7335ea13de38b4460c2deaf6c3b"
 }
