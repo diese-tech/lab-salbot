@@ -1,5 +1,9 @@
 import type { SupabaseClient } from '../client';
-import type { PendingActionType } from '@salbot/shared';
+import {
+  parsePendingActionPayload,
+  type PendingActionPayload,
+  type PendingActionType,
+} from '@salbot/shared';
 import { toDatabaseJson } from '../json';
 
 export async function createPendingAction(
@@ -19,7 +23,9 @@ export async function createPendingAction(
       requested_by_discord_id: params.requestedByDiscordId,
       match_id: params.matchId ?? null,
       division_id: params.divisionId ?? null,
-      payload_json: toDatabaseJson(params.payloadJson),
+      payload_json: toDatabaseJson(
+        parsePendingActionPayload(params.type, params.payloadJson),
+      ),
     })
     .select()
     .single();
@@ -55,21 +61,33 @@ export async function getPendingAction(db: SupabaseClient, id: string) {
     .eq('id', id)
     .single();
 
-  if (error) return null;
-  return data as {
+  if (error || !data) return null;
+  if (!isPendingActionType(data.type)) {
+    throw new Error(`Pending action ${id} has an invalid type.`);
+  }
+  const payloadJson = parsePendingActionPayload(data.type, data.payload_json);
+  return {
+    ...data,
+    type: data.type,
+    payload_json: payloadJson,
+  } as {
     id: string;
-    type: string;
+    type: PendingActionType;
     status: string;
     requested_by_discord_id: string;
     match_id: string | null;
     division_id: string | null;
-    payload_json: Record<string, unknown>;
+    payload_json: PendingActionPayload;
     admin_note: string | null;
     admin_review_message_id: string | null;
     public_receipt_message_id: string | null;
     approved_by_discord_id: string | null;
     approved_at: string | null;
-  } | null;
+  };
+}
+
+function isPendingActionType(value: string): value is PendingActionType {
+  return ['match_result', 'reschedule', 'admin_review', 'alias_change'].includes(value);
 }
 
 // Atomic claim — only succeeds if status is still 'pending'. Returns false if already processed.

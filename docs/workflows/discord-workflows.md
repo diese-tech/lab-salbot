@@ -111,7 +111,29 @@ When a captain reports a result, the bot opens a thread under the public receipt
 - Tracks a running screenshot count against an expected count derived from the score (e.g. a `2-1` result expects 3 games × 2 screenshots = 6).
 - Any message with an image attachment posted in the thread increments the count and edits the thread's tracking message.
 - **Screenshot counts are tracked in memory only** (`activeProofThreads` in `apps/bot/src/lib/proof-thread.ts`) — a bot restart before the result is approved loses in-flight progress tracking, though the uploaded images themselves remain in the thread. Full persistence is a future phase.
-- On admin **Approve**, the thread is archived and locked with a closing message. Deny and Needs Info leave the thread open so captains can upload additional evidence and the admin can re-review.
+- On a terminal admin decision (**Approve**, **Deny**, or stale cancellation),
+  the durable outbox worker posts one marked closing message and archives the
+  thread. **Needs Info** leaves the thread and admin controls open so captains
+  can upload evidence and the admin can make a final decision.
+
+## Durable decision delivery
+
+Approve, Deny, Needs Info, stat approval, and stat rejection call the
+service-role decision RPCs from the pinned database contract. Each RPC commits
+the domain mutation, immutable audit rows, and `operation_outbox` events in one
+PostgreSQL transaction.
+
+SALBot claims outbox work at startup, immediately after a decision, and every
+five seconds. The database owns `FOR UPDATE SKIP LOCKED`, 60-second leases, and
+ten-attempt dead-lettering. The bot applies jittered exponential retry delays
+capped at fifteen minutes. Edit-in-place projections are replay safe; DMs and
+thread messages carry a stable `sal-outbox:<id>` marker and are reconciled
+before creation. Needs Info is the only non-terminal decision and therefore
+preserves the admin card controls.
+
+Worker logs are structured JSON with the outbox ID, topic, attempt, event age,
+retry delay, and dead-letter state. A clean shutdown stops new claims and waits
+for the active drain before disconnecting Discord.
 
 ---
 

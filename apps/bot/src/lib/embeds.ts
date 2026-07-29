@@ -7,7 +7,23 @@ const COLOR = {
   approved: 0x57f287,
   denied: 0xed4245,
   needs_info: 0xfee75c,
+  cancelled: 0x747f8d,
 } as const;
+
+const DECISION_FIELD_NAMES = new Set([
+  'Approved By',
+  'Denied By',
+  'Denial Reason',
+  'Info Requested By',
+  'Info Needed',
+  'Cancelled By',
+  'Cancellation Reason',
+]);
+
+function clearDecisionFields(embed: EmbedBuilder): EmbedBuilder {
+  const fields = embed.toJSON().fields?.filter((field) => !DECISION_FIELD_NAMES.has(field.name)) ?? [];
+  return embed.setFields(fields);
+}
 
 type OrgInfo = { name: string; tag: string };
 type MatchInfo = {
@@ -148,7 +164,7 @@ export function buildApprovalButtons(pendingActionId: string) {
 }
 
 export function applyApprovedStatus(embed: EmbedBuilder, adminDiscordId: string) {
-  return embed
+  return clearDecisionFields(embed)
     .setColor(COLOR.approved)
     .setTitle(`${STATUS_EMOJI.approved} Approved`)
     .addFields({ name: 'Approved By', value: `<@${adminDiscordId}>` })
@@ -156,23 +172,34 @@ export function applyApprovedStatus(embed: EmbedBuilder, adminDiscordId: string)
 }
 
 export function applyDeniedStatus(embed: EmbedBuilder, adminDiscordId: string, reason: string) {
-  return embed
+  return clearDecisionFields(embed)
     .setColor(COLOR.denied)
     .setTitle(`${STATUS_EMOJI.denied} Denied`)
     .addFields(
       { name: 'Denied By', value: `<@${adminDiscordId}>` },
-      { name: 'Reason', value: reason },
+      { name: 'Denial Reason', value: reason },
     )
     .setTimestamp();
 }
 
 export function applyNeedsInfoStatus(embed: EmbedBuilder, adminDiscordId: string, note: string) {
-  return embed
+  return clearDecisionFields(embed)
     .setColor(COLOR.needs_info)
     .setTitle(`${STATUS_EMOJI.pending_info} Needs Info`)
     .addFields(
-      { name: 'Requested By', value: `<@${adminDiscordId}>` },
+      { name: 'Info Requested By', value: `<@${adminDiscordId}>` },
       { name: 'Info Needed', value: note },
+    )
+    .setTimestamp();
+}
+
+export function applyCancelledStatus(embed: EmbedBuilder, adminDiscordId: string, reason: string) {
+  return clearDecisionFields(embed)
+    .setColor(COLOR.cancelled)
+    .setTitle('Cancelled')
+    .addFields(
+      { name: 'Cancelled By', value: `<@${adminDiscordId}>` },
+      { name: 'Cancellation Reason', value: reason },
     )
     .setTimestamp();
 }

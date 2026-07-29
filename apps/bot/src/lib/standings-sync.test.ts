@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { triggerStandingsRecalculation } from './standings-sync';
+import {
+  requestStandingsRecalculation,
+  triggerStandingsRecalculation,
+} from './standings-sync';
 
 describe('triggerStandingsRecalculation', () => {
   const originalEnv = { ...process.env };
@@ -60,5 +63,17 @@ describe('triggerStandingsRecalculation', () => {
 
     await expect(triggerStandingsRecalculation()).resolves.toBeUndefined();
     expect(errorSpy).toHaveBeenCalled();
+  });
+
+  it('throws for the durable worker so a failed projection is retried', async () => {
+    process.env.SAL_SITE_URL = 'https://sal.example.com';
+    process.env.SAL_SITE_INTERNAL_TOKEN = 'test-token';
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false,
+      status: 503,
+      statusText: 'Unavailable',
+    }));
+
+    await expect(requestStandingsRecalculation('outbox-key')).rejects.toThrow('503');
   });
 });
