@@ -62,7 +62,9 @@ Required for all current result, reschedule, and review workflows:
 
 Feature-specific variables:
 
-- `SAL_SITE_URL` and `SAL_SITE_INTERNAL_TOKEN` enable standings recalculation.
+- `SAL_SITE_URL` and `SAL_SITE_INTERNAL_TOKEN` deliver durable standings
+  recalculation events. Missing or invalid values cause bounded outbox retries
+  and eventual dead-lettering; database decisions remain committed.
 - `OPENROUTER_API_KEY` enables `/rules`; `OPENROUTER_MODEL_RULES` selects its
   cheap/free text model. Task-specific model variables fall back to the legacy
   `OPENROUTER_MODEL`, then the committed default.
@@ -80,12 +82,14 @@ Run these checks in staging before promoting a deployment contract change:
 1. Verify the build log uses the committed Dockerfile, frozen pnpm install, and
    all three workspace builds.
 2. Verify the runtime log reaches `[bot] Ready as ...` once.
-3. Verify Railway shows one active deployment, one region, and one replica.
-4. Redeploy the same revision. Confirm the outgoing process logs its SIGTERM
+3. Verify the first structured `operation_outbox` claim succeeds, including
+   after restarting with a committed event waiting in the queue.
+4. Verify Railway shows one active deployment, one region, and one replica.
+5. Redeploy the same revision. Confirm the outgoing process logs its SIGTERM
    shutdown and the deployment details report zero overlap.
-5. Run a read-only bot/database command, then one disposable Discord projection
+6. Run a read-only bot/database command, then one disposable Discord projection
    suitable for staging. Confirm there is exactly one response or message.
-6. Confirm an intentional process failure follows the ten-retry `ON_FAILURE`
+7. Confirm an intentional process failure follows the ten-retry `ON_FAILURE`
    policy, while a clean platform stop is not restarted as a crash.
 
 Record the deployment ID, commit SHA, timestamps, replica count, relevant log
