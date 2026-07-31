@@ -34,7 +34,8 @@ export class OutboxLagMonitor {
   private readonly warnLagSeconds: number;
   private readonly alertLagSeconds: number;
   private readonly now: () => Date;
-  private timer: ReturnType<typeof setInterval> | undefined;
+  private timer: ReturnType<typeof setTimeout> | undefined;
+  private stopped = true;
 
   constructor(
     private readonly dependencies: OutboxLagMonitorDependencies,
@@ -47,14 +48,21 @@ export class OutboxLagMonitor {
   }
 
   start(): void {
-    if (this.timer) return;
-    void this.checkOnce();
-    this.timer = setInterval(() => void this.checkOnce(), this.intervalMs);
+    if (!this.stopped) return;
+    this.stopped = false;
+    void this.runAndScheduleNext();
   }
 
   stop(): void {
-    if (this.timer) clearInterval(this.timer);
+    this.stopped = true;
+    if (this.timer) clearTimeout(this.timer);
     this.timer = undefined;
+  }
+
+  private async runAndScheduleNext(): Promise<void> {
+    await this.checkOnce();
+    if (this.stopped) return;
+    this.timer = setTimeout(() => void this.runAndScheduleNext(), this.intervalMs);
   }
 
   async checkOnce(): Promise<void> {

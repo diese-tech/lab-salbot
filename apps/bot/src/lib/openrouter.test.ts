@@ -140,6 +140,49 @@ describe('askOpenRouter observability', () => {
     });
   });
 
+  it('logs a routing failure, not a success, when a 2xx response body is not valid JSON', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.reject(new SyntaxError('Unexpected end of JSON input')),
+    }) as unknown as typeof fetch;
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    await expect(askOpenRouter('rules-qa', 'system', 'question')).rejects.toThrow('Unexpected end of JSON input');
+
+    expect(logSpy).not.toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+    const logged = JSON.parse(errorSpy.mock.calls[0]![0] as string);
+    expect(logged).toMatchObject({
+      component: 'openrouter',
+      event: 'model_routing_failed',
+      task: 'rules-qa',
+      model: 'google/gemini-2.0-flash-001',
+      error: 'Unexpected end of JSON input',
+    });
+  });
+
+  it('logs a routing failure, not a success, when a 2xx response has no choices', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ error: 'model overloaded' }),
+    }) as unknown as typeof fetch;
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    await expect(askOpenRouter('rules-qa', 'system', 'question')).rejects.toThrow('missing a usable choices array');
+
+    expect(logSpy).not.toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+    const logged = JSON.parse(errorSpy.mock.calls[0]![0] as string);
+    expect(logged).toMatchObject({
+      component: 'openrouter',
+      event: 'model_routing_failed',
+      task: 'rules-qa',
+      model: 'google/gemini-2.0-flash-001',
+    });
+  });
+
   it('logs which model a network failure occurred on', async () => {
     global.fetch = vi.fn().mockRejectedValue(new Error('network down')) as unknown as typeof fetch;
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);

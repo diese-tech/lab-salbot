@@ -129,4 +129,34 @@ describe('OutboxLagMonitor', () => {
 
     vi.useRealTimers();
   });
+
+  it('does not start an overlapping check while the previous one is still in flight', async () => {
+    vi.useFakeTimers();
+    let resolveFirstCheck!: () => void;
+    const checkHealth = vi.fn()
+      .mockImplementationOnce(() => new Promise<{ deadLetterCount: number; oldestPendingAt: string | null }>((resolve) => {
+        resolveFirstCheck = () => resolve({ deadLetterCount: 0, oldestPendingAt: null });
+      }))
+      .mockResolvedValue({ deadLetterCount: 0, oldestPendingAt: null });
+    const deps = dependencies({ checkHealth });
+    const monitor = new OutboxLagMonitor(deps, { intervalMs: 1_000 });
+
+    monitor.start();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(checkHealth).toHaveBeenCalledTimes(1);
+
+    // The interval elapses several times over while the first check is still
+    // pending — a naive setInterval would have fired more checks by now.
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(checkHealth).toHaveBeenCalledTimes(1);
+
+    // Only once the first check settles does the next one get scheduled,
+    // 1000ms later — not immediately.
+    resolveFirstCheck();
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(checkHealth).toHaveBeenCalledTimes(2);
+
+    monitor.stop();
+    vi.useRealTimers();
+  });
 });

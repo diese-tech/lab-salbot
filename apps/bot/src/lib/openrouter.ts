@@ -52,6 +52,19 @@ function logModelRoutingFailure(details: Record<string, unknown>): void {
   console.error(JSON.stringify({ component: 'openrouter', event: 'model_routing_failed', ...details }));
 }
 
+type OpenRouterChatResponse = {
+  choices: Array<{ message: { content: string } }>;
+  usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
+};
+
+function isOpenRouterChatResponse(value: unknown): value is OpenRouterChatResponse {
+  if (typeof value !== 'object' || value === null || !('choices' in value)) return false;
+  const { choices } = value as { choices: unknown };
+  return Array.isArray(choices) && choices.length > 0
+    && typeof choices[0] === 'object' && choices[0] !== null
+    && typeof (choices[0] as { message?: unknown }).message === 'object';
+}
+
 export async function askOpenRouter(
   task: OpenRouterTask,
   systemPrompt: string,
@@ -102,10 +115,22 @@ export async function askOpenRouter(
     throw new Error(`OpenRouter error ${response.status}: ${body}`);
   }
 
-  const json = await response.json() as {
-    choices: Array<{ message: { content: string } }>;
-    usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
-  };
+  let json: OpenRouterChatResponse;
+  try {
+    const parsed: unknown = await response.json();
+    if (!isOpenRouterChatResponse(parsed)) {
+      throw new Error('OpenRouter response was missing a usable choices array.');
+    }
+    json = parsed;
+  } catch (error) {
+    logModelRoutingFailure({
+      task,
+      model,
+      latencyMs: Date.now() - startedAt,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  }
 
   logModelRouting({
     task,
