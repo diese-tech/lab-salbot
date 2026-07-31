@@ -17,6 +17,7 @@ import { toUserMessage } from './lib/errors';
 import { createOutboxProjector } from './lib/outbox-projections';
 import { registerOutboxDrain } from './lib/outbox-runtime';
 import { OperationOutboxWorker } from './lib/outbox-worker';
+import { OutboxLagMonitor } from './lib/outbox-lag-monitor';
 import { startHealthServer, type RunningHealthServer } from './lib/health-server';
 import { ReadinessMonitor } from './lib/readiness';
 import { createShutdownHandler } from './lib/shutdown';
@@ -75,6 +76,15 @@ const client = new Client({
   ],
 });
 
+function componentLog(component: string) {
+  return (level: 'info' | 'warn' | 'error', event: string, details: Record<string, unknown> = {}) => {
+    const message = JSON.stringify({ component, event, ...details });
+    if (level === 'error') console.error(message);
+    else if (level === 'warn') console.warn(message);
+    else console.log(message);
+  };
+}
+
 const outboxWorker = new OperationOutboxWorker(
   {
     claim: (workerId, limit) => claimOperationOutbox(db, workerId, limit),
@@ -83,16 +93,19 @@ const outboxWorker = new OperationOutboxWorker(
       completeOperationOutbox(db, outboxId, workerId, externalId),
     fail: (outboxId, workerId, error, retryAfterSeconds) =>
       failOperationOutbox(db, outboxId, workerId, error, retryAfterSeconds),
-    log: (level, event, details = {}) => {
-      const message = JSON.stringify({ component: 'operation_outbox', event, ...details });
-      if (level === 'error') console.error(message);
-      else if (level === 'warn') console.warn(message);
-      else console.log(message);
-    },
+    log: componentLog('operation_outbox'),
   },
   { workerId: `${hostname()}:${process.pid}:${randomUUID()}` },
 );
 registerOutboxDrain(() => outboxWorker.drainNow());
+
+// Samples outbox backlog age on an interval so a stuck or slow-draining
+// outbox surfaces in logs/metrics on its own, not only when someone polls
+// /healthz. See docs/observability.md.
+const outboxLagMonitor = new OutboxLagMonitor({
+  checkHealth: () => getOperationOutboxHealth(db),
+  log: componentLog('operation_outbox_lag'),
+});
 
 const readiness = new ReadinessMonitor({
   isDiscordReady: () => client.isReady(),
@@ -104,6 +117,7 @@ let healthServer: RunningHealthServer | undefined;
 const shutdown = createShutdownHandler({
   beginDrain: () => readiness.beginDrain(),
   stopOutbox: () => outboxWorker.stop(25_000),
+  stopOutboxLagMonitor: () => outboxLagMonitor.stop(),
   destroyDiscord: () => client.destroy(),
   closeHealthServer: async () => {
     if (healthServer) await healthServer.close();
@@ -133,6 +147,7 @@ client.once('ready', async () => {
   console.log(`[bot] Admin review channel: ${process.env.CHANNEL_ADMIN_REVIEW ?? 'NOT SET'}`);
   subscribeToGodDraftRecaps(client, db);
   await outboxWorker.start();
+  outboxLagMonitor.start();
 });
 
 // ── Interaction handler ────────────────────────────────────────────────────────────

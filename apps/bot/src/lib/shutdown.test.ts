@@ -18,6 +18,23 @@ describe('clean shutdown', () => {
     expect(calls).toEqual(['draining', 'outbox', 'discord', 'health', 'exit']);
   });
 
+  it('stops the outbox lag monitor when provided', async () => {
+    const calls: string[] = [];
+    const shutdown = createShutdownHandler({
+      beginDrain: () => calls.push('draining'),
+      stopOutbox: vi.fn().mockImplementation(async () => { calls.push('outbox'); }),
+      stopOutboxLagMonitor: vi.fn().mockImplementation(() => { calls.push('outbox-lag'); }),
+      destroyDiscord: vi.fn().mockImplementation(async () => { calls.push('discord'); }),
+      closeHealthServer: vi.fn().mockImplementation(async () => { calls.push('health'); }),
+      exit: vi.fn().mockImplementation(() => { calls.push('exit'); }),
+      log: vi.fn(),
+    });
+
+    await shutdown();
+
+    expect(calls).toEqual(['draining', 'outbox', 'outbox-lag', 'discord', 'health', 'exit']);
+  });
+
   it('coalesces repeated shutdown signals', async () => {
     const stopOutbox = vi.fn().mockResolvedValue(undefined);
     const shutdown = createShutdownHandler({

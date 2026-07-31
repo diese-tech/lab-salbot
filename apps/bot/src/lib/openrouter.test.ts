@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it } from 'vitest';
-import { getOpenRouterModel } from './openrouter';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { askOpenRouter, getOpenRouterModel } from './openrouter';
 
 const MODEL_ENV_VARS = [
   'OPENROUTER_MODEL',
@@ -54,5 +54,148 @@ describe('getOpenRouterModel', () => {
     for (const key of MODEL_ENV_VARS) delete process.env[key];
 
     expect(getOpenRouterModel('rules-qa')).toBe('google/gemini-2.0-flash-001');
+  });
+});
+
+describe('askOpenRouter observability', () => {
+  const originalFetch = global.fetch;
+  const originalApiKey = process.env.OPENROUTER_API_KEY;
+
+  beforeEach(() => {
+    process.env.OPENROUTER_API_KEY = 'test-key';
+    for (const key of MODEL_ENV_VARS) delete process.env[key];
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+    if (originalApiKey === undefined) delete process.env.OPENROUTER_API_KEY;
+    else process.env.OPENROUTER_API_KEY = originalApiKey;
+    vi.restoreAllMocks();
+  });
+
+  it('logs which model a task routed to, with token usage and a cost estimate', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({
+        choices: [{ message: { content: 'answer' } }],
+        usage: { prompt_tokens: 1000, completion_tokens: 500, total_tokens: 1500 },
+      }),
+    }) as unknown as typeof fetch;
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+
+    const answer = await askOpenRouter('rules-qa', 'system', 'question');
+
+    expect(answer).toBe('answer');
+    expect(logSpy).toHaveBeenCalledTimes(1);
+    const logged = JSON.parse(logSpy.mock.calls[0]![0] as string);
+    expect(logged).toMatchObject({
+      component: 'openrouter',
+      event: 'model_routed',
+      task: 'rules-qa',
+      model: 'google/gemini-2.0-flash-001',
+      promptTokens: 1000,
+      completionTokens: 500,
+      totalTokens: 1500,
+    });
+    expect(logged.estimatedCostUsd).toBeCloseTo(0.0003, 6);
+    expect(typeof logged.latencyMs).toBe('number');
+  });
+
+  it('logs a null cost estimate for a model with no known pricing', async () => {
+    process.env.OPENROUTER_MODEL_RULES = 'some/unpriced-model';
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({
+        choices: [{ message: { content: 'answer' } }],
+        usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+      }),
+    }) as unknown as typeof fetch;
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+
+    await askOpenRouter('rules-qa', 'system', 'question');
+
+    const logged = JSON.parse(logSpy.mock.calls[0]![0] as string);
+    expect(logged.model).toBe('some/unpriced-model');
+    expect(logged.estimatedCostUsd).toBeNull();
+  });
+
+  it('logs which model a failed call routed to, including the HTTP status', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 429,
+      text: () => Promise.resolve('rate limited'),
+    }) as unknown as typeof fetch;
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    await expect(askOpenRouter('image-extract', 'system', 'question')).rejects.toThrow('OpenRouter error 429');
+
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+    const logged = JSON.parse(errorSpy.mock.calls[0]![0] as string);
+    expect(logged).toMatchObject({
+      component: 'openrouter',
+      event: 'model_routing_failed',
+      task: 'image-extract',
+      model: 'google/gemini-2.0-flash-001',
+      status: 429,
+    });
+  });
+
+  it('logs a routing failure, not a success, when a 2xx response body is not valid JSON', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.reject(new SyntaxError('Unexpected end of JSON input')),
+    }) as unknown as typeof fetch;
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    await expect(askOpenRouter('rules-qa', 'system', 'question')).rejects.toThrow('Unexpected end of JSON input');
+
+    expect(logSpy).not.toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+    const logged = JSON.parse(errorSpy.mock.calls[0]![0] as string);
+    expect(logged).toMatchObject({
+      component: 'openrouter',
+      event: 'model_routing_failed',
+      task: 'rules-qa',
+      model: 'google/gemini-2.0-flash-001',
+      error: 'Unexpected end of JSON input',
+    });
+  });
+
+  it('logs a routing failure, not a success, when a 2xx response has no choices', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ error: 'model overloaded' }),
+    }) as unknown as typeof fetch;
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    await expect(askOpenRouter('rules-qa', 'system', 'question')).rejects.toThrow('missing a usable choices array');
+
+    expect(logSpy).not.toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+    const logged = JSON.parse(errorSpy.mock.calls[0]![0] as string);
+    expect(logged).toMatchObject({
+      component: 'openrouter',
+      event: 'model_routing_failed',
+      task: 'rules-qa',
+      model: 'google/gemini-2.0-flash-001',
+    });
+  });
+
+  it('logs which model a network failure occurred on', async () => {
+    global.fetch = vi.fn().mockRejectedValue(new Error('network down')) as unknown as typeof fetch;
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    await expect(askOpenRouter('rules-qa', 'system', 'question')).rejects.toThrow('network down');
+
+    const logged = JSON.parse(errorSpy.mock.calls[0]![0] as string);
+    expect(logged).toMatchObject({
+      component: 'openrouter',
+      event: 'model_routing_failed',
+      task: 'rules-qa',
+      model: 'google/gemini-2.0-flash-001',
+      error: 'network down',
+    });
   });
 });
