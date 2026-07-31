@@ -1,6 +1,7 @@
 type ShutdownDependencies = {
   beginDrain: () => void;
   stopOutbox: () => Promise<void>;
+  stopOutboxLagMonitor?: () => void;
   destroyDiscord: () => Promise<void> | void;
   closeHealthServer: () => Promise<void>;
   exit: (code: number) => void;
@@ -20,6 +21,9 @@ export function createShutdownHandler(dependencies: ShutdownDependencies): () =>
 
 async function runShutdown(dependencies: ShutdownDependencies): Promise<void> {
   await attempt('outbox worker', dependencies.stopOutbox, dependencies.log);
+  if (dependencies.stopOutboxLagMonitor) {
+    await attempt('outbox lag monitor', dependencies.stopOutboxLagMonitor, dependencies.log);
+  }
   await attempt('Discord client', dependencies.destroyDiscord, dependencies.log);
   await attempt('health server', dependencies.closeHealthServer, dependencies.log);
   dependencies.exit(0);
