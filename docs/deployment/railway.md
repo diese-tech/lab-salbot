@@ -90,13 +90,17 @@ it and the bot would handle it correctly if it were ever invoked.
 The `Deploy Discord Commands` GitHub Actions workflow
 (`.github/workflows/deploy-commands.yml`) runs `pnpm --filter @salbot/bot
 deploy:commands` on every push to `main`, registering the full command set.
-It requires `DISCORD_TOKEN` as a GitHub Actions repository **secret**, and
-`DISCORD_CLIENT_ID` and `DISCORD_GUILD_ID` as repository **variables** — the
-latter two are public identifiers (visible in the bot's invite URL and the
-server itself), not credentials, so they don't belong in secret storage.
-Set all three to the same values as the Railway service's copies. These are
-separate stores from Railway's; if the Discord bot token is ever rotated
-there, update the GitHub secret too or this workflow will start failing (or
+It requires `DISCORD_TOKEN`, `DISCORD_CLIENT_ID`, and `DISCORD_GUILD_ID`
+scoped to the `production` GitHub Environment (Settings -> Environments ->
+`production`) rather than plain repository secrets/variables — the workflow
+job declares `environment: production` to see them. `DISCORD_TOKEN` is an
+environment **secret**; `DISCORD_CLIENT_ID` and `DISCORD_GUILD_ID` are
+environment **variables** — the latter two are public identifiers (visible in
+the bot's invite URL and the server itself), not credentials, so they don't
+belong in secret storage. Set all three to the same values as the Railway
+service's copies. These are separate stores from Railway's; if the Discord
+bot token is ever rotated there, update the GitHub secret too or this
+workflow will start failing (or
 silently register against a stale client ID/guild) the next time a command
 changes.
 
