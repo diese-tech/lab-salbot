@@ -36,6 +36,11 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @salbot/bot deploy:commands
         env:
+          # DISCORD_TOKEN is the bot's actual credential — a repo Secret.
+          # DISCORD_CLIENT_ID and DISCORD_GUILD_ID are public identifiers
+          # (visible in the bot's invite URL / the server itself), not
+          # secrets — repo Variables instead, per GitHub's own guidance on
+          # not storing non-sensitive config as secrets.
           DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
-          DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
-          DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
+          DISCORD_CLIENT_ID: ${{ vars.DISCORD_CLIENT_ID }}
+          DISCORD_GUILD_ID: ${{ vars.DISCORD_GUILD_ID }}
