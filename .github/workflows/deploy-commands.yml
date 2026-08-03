@@ -23,6 +23,12 @@ jobs:
     name: Deploy Commands
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # DISCORD_TOKEN/DISCORD_CLIENT_ID/DISCORD_GUILD_ID live as environment
+    # secrets/variables under the "production" environment (Settings ->
+    # Environments -> production), not as plain repository secrets/variables
+    # — declaring the environment here is what makes them visible to secrets.*
+    # / vars.* below.
+    environment: production
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
