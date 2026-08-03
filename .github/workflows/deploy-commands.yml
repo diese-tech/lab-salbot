@@ -1,0 +1,41 @@
+name: Deploy Discord Commands
+
+# Registering slash commands with Discord is a separate step from deploying
+# the bot process itself (railway.toml intentionally clears preDeployCommand
+# and ships a slim runtime image with no dev scripts — see
+# docs/deployment/railway.md). Without this, a merged command can sit fully
+# working in the bot's code and still not appear in Discord's command picker.
+#
+# This registers the full command set on every push to main. The Discord API
+# call is idempotent (a full PUT of the command list), so re-running it when
+# nothing changed is harmless.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-commands:
+    name: Deploy Commands
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 9.0.0
+          run_install: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @salbot/bot deploy:commands
+        env:
+          DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+          DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
+          DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
