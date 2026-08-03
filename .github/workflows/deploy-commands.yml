@@ -43,6 +43,12 @@ jobs:
           node-version: "24"
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # deploy-commands.ts imports command modules that transitively import
+      # @salbot/db by package name (not a relative path), which resolves
+      # through its package.json "main" to dist/index.js — unlike vitest/tsc
+      # in the other CI jobs, plain tsx + Node's module resolution can't fall
+      # back to TS source, so the workspace packages must be built first.
+      - run: pnpm build
       - run: pnpm --filter @salbot/bot deploy:commands
         env:
           # DISCORD_TOKEN is the bot's actual credential — a repo Secret.
