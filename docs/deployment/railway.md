@@ -78,6 +78,39 @@ Feature-specific variables:
 The process fails fast when a startup-required variable is absent. Missing
 channel variables are logged at startup and fail only the affected workflow.
 
+## Slash Command Registration
+
+Discord's command picker only shows commands that have been explicitly
+registered against the guild via `PUT /applications/{id}/guilds/{guild}/commands`
+(`discord.js`'s `Routes.applicationGuildCommands`). This is independent of
+deploying the bot process: a merged, running command handler that was never
+registered is invisible in Discord even though `/help` (a static embed) lists
+it and the bot would handle it correctly if it were ever invoked.
+
+The `Deploy Discord Commands` GitHub Actions workflow
+(`.github/workflows/deploy-commands.yml`) runs `pnpm --filter @salbot/bot
+deploy:commands` on every push to `main`, registering the full command set.
+It requires `DISCORD_TOKEN` as a GitHub Actions repository **secret**, and
+`DISCORD_CLIENT_ID` and `DISCORD_GUILD_ID` as repository **variables** — the
+latter two are public identifiers (visible in the bot's invite URL and the
+server itself), not credentials, so they don't belong in secret storage.
+Set all three to the same values as the Railway service's copies. These are
+separate stores from Railway's; if the Discord bot token is ever rotated
+there, update the GitHub secret too or this workflow will start failing (or
+silently register against a stale client ID/guild) the next time a command
+changes.
+
+This is deliberately not folded into the Railway deploy itself:
+`railway.toml` clears `preDeployCommand` and the runtime image intentionally
+ships only the compiled bot, no dev scripts (`tsx`, `scripts/deploy-commands.ts`
+are not present in the runtime image) — see the `[build]`/`[deploy]` comments
+in `railway.toml`.
+
+If commands are ever missing from Discord despite this workflow being green,
+run `pnpm --filter @salbot/bot deploy:commands` manually with the production
+credentials as a fallback, and check the workflow's run history for the real
+cause first.
+
 ## Deployment Verification
 
 Run these checks in staging before promoting a deployment contract change:
