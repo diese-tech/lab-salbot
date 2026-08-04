@@ -69,7 +69,7 @@ This distinction matters for:
 
 ### `/report-result`
 
-Captain selects eligible match from Supabase-driven dropdown → enters winner + score → system creates:
+An authorized Discord operator selects a current-season match from a Supabase-driven dropdown → enters winner + score → system creates:
 
 1. Public embed in `#match-results-[division]`
 2. Dedicated proof thread for screenshot upload
@@ -78,6 +78,10 @@ Captain selects eligible match from Supabase-driven dropdown → enters winner +
 5. Audit log entry
 
 Screenshots are uploaded to the proof thread, not inline to the command. This supports 6–10 screenshots per match without degrading UX.
+
+`/report-result` and `/log-scouter` authorize from the centrally configured
+`SAL_OPERATOR_ROLE_IDS` and `SAL_ADMIN_ROLE_IDS`. OAuth/player linkage supplies
+identity and profile data only; it is not a command permission gate.
 
 ### `/reschedule`
 

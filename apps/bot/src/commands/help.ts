@@ -10,14 +10,14 @@ export const data = {
 } as const;
 
 const COMMAND_LIST = [
-  ['/report-result', 'Captains', "Report a completed match's score."],
+  ['/report-result', 'SAL Operators / Admins', "Report a completed match's score."],
   ['/reschedule', 'Captains', 'Request a new date/time for an upcoming match.'],
   ['/request-admin-review', 'Everyone', 'Escalate an issue directly to admins.'],
   ['/rules', 'Everyone', 'Ask a question about the league ruleset.'],
   ['/update-ign', 'Everyone', 'Request an in-game name change. *(Not yet implemented — ask an admin for now.)*'],
   ['/division-role-config', 'Admins', 'Map a division to a Discord role, or list mappings.'],
   ['/division-sync', 'Admins', "Bulk-sync players' Discord identity and division roles from a CSV."],
-  ['/log-scouter', 'Captains / Admins', 'Upload SMITE 2 screenshots and record a public scouter receipt.'],
+  ['/log-scouter', 'SAL Operators / Admins', 'Upload SMITE 2 screenshots and record a public scouter receipt.'],
   ['/profile', 'Everyone', "View your or another linked player's scouter stats."],
   ['/help', 'Everyone', 'Show this list.'],
 ] as const;

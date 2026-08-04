@@ -32,25 +32,29 @@ rosters or draft positions.
 
 ---
 
-## Captain Resolution
+## Operational Command Authorization
 
-Current match commands (`/report-result`, `/reschedule`) start with identity resolution:
+`/report-result` and `/log-scouter` use current Discord server roles as their
+authorization source:
 
 ```
-Discord user ID
-  → players table (discord_id, is_captain = true)
-  → player.org_id
-  → orgs.id
-  → eligible matches for that org (status = 'scheduled', home_org_id or away_org_id matches)
+Discord guild member roles
+  → SAL_OPERATOR_ROLE_IDS or SAL_ADMIN_ROLE_IDS
+  → operational command capability
 ```
 
-If the Discord user is not found in `players`, or is not flagged as a captain, the command returns an ephemeral error. The user is not shown a match dropdown.
+OAuth, `players.discord_id`, and roster captain state remain identity/business
+data. They neither grant nor deny these command capabilities. Missing or
+malformed role configuration fails closed. `/report-result` then presents the
+scheduled, non-archived matches in the current season; downstream pending
+action and admin review safeguards are unchanged.
 
-This prevents:
+`/reschedule` still uses its existing linked-captain/org match filter. It is
+not part of the initial ADR-009 role-authorization migration.
 
-- Unregistered users submitting results
-- Non-captains submitting on behalf of their org
-- Match selection from the wrong division
+See
+[`ADR-009`](../adr/ADR-009-discord-role-backed-operational-command-authorization.md)
+for the supersession and capability contract.
 
 Planned roster commands use the stricter season-scoped authorization defined in
 ADR-009:

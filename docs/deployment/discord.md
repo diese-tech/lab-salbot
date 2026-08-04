@@ -69,10 +69,13 @@ The command requires:
 - `DISCORD_TOKEN`
 - `DISCORD_CLIENT_ID`
 - `DISCORD_GUILD_ID`
-- `SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY`
 
-Supabase configuration is required because command modules share the same runtime imports as the bot.
+The running bot additionally requires `SUPABASE_URL`,
+`SUPABASE_SERVICE_ROLE_KEY`, `SAL_OPERATOR_ROLE_IDS`, and
+`SAL_ADMIN_ROLE_IDS`. The two role variables are comma-separated Discord role
+IDs and must be configured on Railway before deploying this authorization
+change. Command registration itself uses only the three Discord credentials
+listed above.
 
 ## Admin Setup
 

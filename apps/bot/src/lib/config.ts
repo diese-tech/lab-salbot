@@ -1,4 +1,5 @@
 import { CHANNEL_ENV_VARS } from './channels';
+import { validateCommandAccessEnv } from './command-access';
 
 const REQUIRED_ENV = [
   'DISCORD_TOKEN',
@@ -6,6 +7,8 @@ const REQUIRED_ENV = [
   'DISCORD_GUILD_ID',
   'SUPABASE_URL',
   'SUPABASE_SERVICE_ROLE_KEY',
+  'SAL_OPERATOR_ROLE_IDS',
+  'SAL_ADMIN_ROLE_IDS',
 ] as const;
 
 export function validateRequiredEnv() {
@@ -13,6 +16,7 @@ export function validateRequiredEnv() {
   if (missing.length > 0) {
     throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
   }
+  validateCommandAccessEnv();
 }
 
 export function requiredEnvNames() {
