@@ -7,8 +7,7 @@ import {
   TextInputStyle,
 } from 'discord.js';
 import {
-  getCaptainByDiscordId,
-  getEligibleMatchesForCaptain,
+  getEligibleMatchesForOperator,
   createPendingAction,
   updatePendingActionMessages,
 } from '@salbot/db';
@@ -23,6 +22,7 @@ import {
 } from '../lib/embeds';
 import { createProofThread } from '../lib/proof-thread';
 import { isUniqueViolation } from '../lib/errors';
+import { hasCommandAccess } from '../lib/command-access';
 
 export const data = {
   name: 'report-result',
@@ -32,19 +32,20 @@ export const data = {
 // ── Step 1: Show match select ─────────────────────────────────────────────────
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  const captain = await getCaptainByDiscordId(db, interaction.user.id);
-  if (!captain) {
-    await interaction.reply({ content: 'You are not registered as a captain.', ephemeral: true });
+  if (!hasCommandAccess(interaction.member, 'report-result')) {
+    await interaction.reply({
+      content: 'You need an authorized SAL operator or admin Discord role to report results.',
+      ephemeral: true,
+    });
     return;
   }
 
-  const matches = await getEligibleMatchesForCaptain(
-    db,
-    captain.org_id as string,
-    captain.season_id as string
-  );
+  const matches = await getEligibleMatchesForOperator(db);
   if (!matches.length) {
-    await interaction.reply({ content: 'You have no scheduled matches available to report.', ephemeral: true });
+    await interaction.reply({
+      content: 'There are no scheduled current-season matches available to report.',
+      ephemeral: true,
+    });
     return;
   }
 

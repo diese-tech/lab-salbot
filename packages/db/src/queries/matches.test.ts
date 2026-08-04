@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { completeMatch, getEligibleMatchesForCaptain, rescheduleMatch } from "./matches";
+import { completeMatch, getEligibleMatchesForCaptain, getEligibleMatchesForOperator, rescheduleMatch } from "./matches";
 
 // Regression test for F-02b: completeMatch/rescheduleMatch used to update the
 // `matches` row unconditionally, with no `status = 'scheduled'` precondition.
@@ -97,6 +97,36 @@ describe("getEligibleMatchesForCaptain archived filter", () => {
     const eligible = await getEligibleMatchesForCaptain(db, "org-1", "season-current");
 
     expect(eligible.map((row: Row) => row.id)).toEqual(["m-5"]);
+  });
+});
+
+describe("getEligibleMatchesForOperator", () => {
+  it("returns scheduled, non-archived matches from the current season without an org identity filter", async () => {
+    const calls: string[] = [];
+    const seasonBuilder = {
+      select: () => seasonBuilder,
+      eq: () => seasonBuilder,
+      single: () => Promise.resolve({ data: { id: "season-current" }, error: null }),
+    };
+    const matchBuilder = {
+      select: () => matchBuilder,
+      eq: (column: string, value: unknown) => (calls.push(`eq:${column}:${value}`), matchBuilder),
+      is: (column: string, value: unknown) => (calls.push(`is:${column}:${value}`), matchBuilder),
+      gte: () => matchBuilder,
+      order: () => matchBuilder,
+      limit: () => Promise.resolve({ data: [{ id: "m-operator" }], error: null }),
+    };
+    const db = {
+      from: (table: string) => table === "seasons" ? seasonBuilder : matchBuilder,
+    } as never;
+
+    const eligible = await getEligibleMatchesForOperator(db);
+
+    expect(eligible).toEqual([{ id: "m-operator" }]);
+    expect(calls).toContain("eq:season_id:season-current");
+    expect(calls).toContain("eq:status:scheduled");
+    expect(calls).toContain("is:archived_at:null");
+    expect(calls.some((call) => call.startsWith("or:"))).toBe(false);
   });
 });
 

@@ -16,13 +16,12 @@ import {
   ModalBuilder,
 } from "discord.js";
 import {
-  getCaptainByDiscordId,
   getCurrentScouterSeason,
   getScouterMatchReceipt,
-  isAdminUser,
   type ScouterReceipt as DatabaseScouterReceipt,
 } from "@salbot/db";
 import { db } from "../lib/db";
+import { hasCommandAccess } from "../lib/command-access";
 import { ScouterIngestError, submitScouterGame } from "../lib/scouter-ingest";
 import {
   getScouterImagePublicUrl,
@@ -60,11 +59,10 @@ export const data = {
 export async function execute(
   interaction: ChatInputCommandInteraction,
 ): Promise<void> {
-  const authorized = await canHostScouter(interaction.user.id);
-  if (!authorized) {
+  if (!hasCommandAccess(interaction.member, "log-scouter")) {
     await interaction.reply({
       content:
-        "Only a current-season captain or SAL admin can log scouter matches.",
+        "You need an authorized SAL operator or admin Discord role to log scouter matches.",
       ephemeral: true,
     });
     return;
@@ -110,6 +108,13 @@ export async function handleUploadButton(
     });
     return;
   }
+  if (!hasCommandAccess(interaction.member, "log-scouter")) {
+    await interaction.reply({
+      content: "You are no longer authorized to continue this scouter upload.",
+      ephemeral: true,
+    });
+    return;
+  }
 
   await interaction.showModal(buildUploadModal(state));
 }
@@ -122,7 +127,7 @@ export async function handleUploadModal(
 
   if (
     interaction.user.id !== state.ownerDiscordId ||
-    !(await canHostScouter(interaction.user.id))
+    !hasCommandAccess(interaction.member, "log-scouter")
   ) {
     await interaction.editReply(
       "You are no longer authorized to continue this scouter upload.",
@@ -443,14 +448,6 @@ function decodeStateIdentifier(value: string): string {
 
   const uuid = compactUuid[1];
   return `${uuid.slice(0, 8)}-${uuid.slice(8, 12)}-${uuid.slice(12, 16)}-${uuid.slice(16, 20)}-${uuid.slice(20)}`;
-}
-
-async function canHostScouter(discordId: string) {
-  const [captain, admin] = await Promise.all([
-    getCaptainByDiscordId(db, discordId),
-    isAdminUser(db, discordId),
-  ]);
-  return captain !== null || admin;
 }
 
 function toScouterAttachment(attachment: Attachment) {

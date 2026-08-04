@@ -32,6 +32,30 @@ export async function getEligibleMatchesForCaptain(
   return data ?? [];
 }
 
+export async function getEligibleMatchesForOperator(db: SupabaseClient) {
+  const { data: season, error: seasonError } = await db
+    .from('seasons')
+    .select('id')
+    .eq('is_current', true)
+    .single();
+  if (seasonError || !season) return [];
+
+  const today = new Date().toISOString().split('T')[0];
+  const { data, error } = await db
+    .from('matches')
+    .select(MATCH_FIELDS)
+    .eq('season_id', season.id)
+    .eq('status', 'scheduled')
+    .is('archived_at', null)
+    .gte('scheduled_date', today)
+    .order('scheduled_date')
+    .order('scheduled_time')
+    .limit(25);
+
+  if (error) return [];
+  return data ?? [];
+}
+
 export async function getMatchById(db: SupabaseClient, matchId: string) {
   const { data, error } = await db
     .from('matches')

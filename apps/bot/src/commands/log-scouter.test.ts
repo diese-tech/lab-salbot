@@ -1,17 +1,15 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../lib/db", () => ({ db: {} }));
+vi.mock("../lib/command-access", () => ({ hasCommandAccess: vi.fn() }));
 vi.mock("@salbot/db", () => ({
-  getCaptainByDiscordId: vi.fn(),
   getCurrentScouterSeason: vi.fn(),
   getScouterMatchReceipt: vi.fn(),
-  isAdminUser: vi.fn(),
 }));
 import {
-  getCaptainByDiscordId,
   getCurrentScouterSeason,
-  isAdminUser,
 } from "@salbot/db";
+import { hasCommandAccess } from "../lib/command-access";
 import {
   buildScouterReceiptEmbed,
   buildUploadButton,
@@ -53,11 +51,12 @@ const receipt: ScouterReceipt = {
 };
 
 describe("/log-scouter state and receipt", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("posts the upload workflow publicly in the invoking channel", async () => {
-    vi.mocked(getCaptainByDiscordId).mockResolvedValue({
-      id: "captain",
-    } as never);
-    vi.mocked(isAdminUser).mockResolvedValue(false);
+    vi.mocked(hasCommandAccess).mockReturnValue(true);
     vi.mocked(getCurrentScouterSeason).mockResolvedValue({
       id: "preseason2",
       name: "Preseason 2",
@@ -68,9 +67,15 @@ describe("/log-scouter state and receipt", () => {
 
     await execute({
       user: { id: "123456789012345678" },
+      member: { roles: ["111111111111111111"] },
       options: { getInteger: () => 2 },
       reply,
     } as never);
+
+    expect(hasCommandAccess).toHaveBeenCalledWith(
+      { roles: ["111111111111111111"] },
+      "log-scouter",
+    );
 
     expect(reply).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -79,6 +84,24 @@ describe("/log-scouter state and receipt", () => {
       }),
     );
     expect(reply.mock.calls[0][0]).not.toHaveProperty("ephemeral");
+  });
+
+  it("rejects a linked captain without a configured Discord operator role", async () => {
+    vi.mocked(hasCommandAccess).mockReturnValue(false);
+    const reply = vi.fn();
+
+    await execute({
+      user: { id: "linked-captain" },
+      member: { roles: [] },
+      options: { getInteger: () => 2 },
+      reply,
+    } as never);
+
+    expect(getCurrentScouterSeason).not.toHaveBeenCalled();
+    expect(reply).toHaveBeenCalledWith({
+      content: "You need an authorized SAL operator or admin Discord role to log scouter matches.",
+      ephemeral: true,
+    });
   });
 
   it("round-trips the durable identifiers needed for a two-game happy path", () => {
