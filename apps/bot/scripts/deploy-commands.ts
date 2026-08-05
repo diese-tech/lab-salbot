@@ -2,6 +2,7 @@
 // Usage: pnpm --filter @salbot/bot deploy:commands
 
 import { REST, Routes } from 'discord.js';
+import { loadCommandManifest } from '../src/command-manifest';
 
 // Only the Discord registration credentials — not requiredEnvNames() from
 // ../src/lib/config, which also demands SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY
@@ -18,53 +19,21 @@ if (missing.length > 0) {
   console.error(`${missing.join(', ')} are required`);
   process.exit(1);
 }
+// The aggregate check above is useful for operators; this explicit guard also
+// narrows all three values for TypeScript before Discord.js receives them.
+if (!token || !clientId || !guildId) process.exit(1);
 
-async function main() {
-  const [
-    reportResult,
-    reschedule,
-    requestAdminReview,
-    updateIgn,
-    rules,
-    divisionRoleConfig,
-    divisionSync,
-    logScouter,
-    profile,
-    help,
-  ] = await Promise.all([
-    import('../src/commands/report-result'),
-    import('../src/commands/reschedule'),
-    import('../src/commands/request-admin-review'),
-    import('../src/commands/update-ign'),
-    import('../src/commands/rules'),
-    import('../src/commands/division-role-config'),
-    import('../src/commands/division-sync'),
-    import('../src/commands/log-scouter'),
-    import('../src/commands/profile'),
-    import('../src/commands/help'),
-  ]);
+async function main(credentials: { token: string; clientId: string; guildId: string }) {
+  const commands = await loadCommandManifest();
 
-  const commands = [
-    reportResult.data,
-    reschedule.data,
-    requestAdminReview.data,
-    updateIgn.data,
-    rules.data,
-    divisionRoleConfig.data,
-    divisionSync.data,
-    logScouter.data,
-    profile.data,
-    help.data,
-  ];
+  const rest = new REST().setToken(credentials.token);
 
-  const rest = new REST().setToken(token);
-
-  console.log(`Registering ${commands.length} slash commands to guild ${guildId}...`);
-  await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: commands });
+  console.log(`Registering ${commands.length} slash commands to guild ${credentials.guildId}...`);
+  await rest.put(Routes.applicationGuildCommands(credentials.clientId, credentials.guildId), { body: commands });
   console.log('Commands registered successfully.');
 }
 
-main().catch((err) => {
+main({ token, clientId, guildId }).catch((err) => {
   console.error('Failed to register commands:', err);
   process.exit(1);
 });

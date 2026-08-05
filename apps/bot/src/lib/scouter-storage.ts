@@ -1,7 +1,9 @@
 import type { SupabaseClient } from "@salbot/db";
 
 const BUCKET = "match-screenshots";
-const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
+// Keep this at or below the canonical Supabase bucket limit. Raising it is a
+// sal-database release decision, not a bot-only configuration change.
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 
 type ScouterAttachment = {
   id: string;
@@ -43,7 +45,7 @@ export async function uploadScouterImage(
   }
   if (attachment.size > MAX_IMAGE_BYTES) {
     throw new Error(
-      `${options.kind === "scoreboard" ? "Scoreboard" : "Details"} image must be 20 MB or smaller.`,
+      `${options.kind === "scoreboard" ? "Scoreboard" : "Details"} image must be 10 MB or smaller.`,
     );
   }
 

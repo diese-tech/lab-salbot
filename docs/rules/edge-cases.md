@@ -3,7 +3,8 @@
 Authoritative rulings on situations not explicitly addressed in the main ruleset, or where
 the ruleset required interpretation. Admins add entries here as situations arise.
 
-The `/rules` bot command uses this document alongside `ruleset.md` as its knowledge base.
+This repository document is not currently served by SALBot. `/rules` remains
+unregistered until it consumes the live sal-site rules source.
 
 Format each entry as: **Question** → **Ruling** → (optional) **Section reference**.
 

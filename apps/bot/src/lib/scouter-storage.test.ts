@@ -73,4 +73,31 @@ describe("uploadScouterImage", () => {
     expect(fetchImpl).not.toHaveBeenCalled();
     expect(from).not.toHaveBeenCalled();
   });
+
+  it("rejects images larger than the canonical 10 MiB bucket limit", async () => {
+    const fetchImpl = vi.fn();
+    const from = vi.fn();
+
+    await expect(
+      uploadScouterImage(
+        { storage: { from } } as never,
+        {
+          id: "attachment-large",
+          url: "https://cdn.discordapp.com/large.png",
+          name: "large.png",
+          contentType: "image/png",
+          size: 10 * 1024 * 1024 + 1,
+        },
+        {
+          matchScopeId: "session-1",
+          gameOrdinal: 1,
+          kind: "scoreboard",
+          fetchImpl,
+        },
+      ),
+    ).rejects.toThrow("10 MB or smaller");
+
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(from).not.toHaveBeenCalled();
+  });
 });
