@@ -5,6 +5,7 @@ import type {
   ChatInputCommandInteraction,
   Message,
   ModalSubmitInteraction,
+  StringSelectMenuInteraction,
 } from "discord.js";
 import {
   ActionRowBuilder,
@@ -22,7 +23,27 @@ import {
 } from "@salbot/db";
 import { db } from "../lib/db";
 import { hasCommandAccess } from "../lib/command-access";
-import { ScouterIngestError, submitScouterGame } from "../lib/scouter-ingest";
+import {
+  cancelScouterDraft,
+  confirmScouterDraft,
+  extractScouterDraft,
+  getScouterDraft,
+  reviseScouterDraft,
+  ScouterIngestError,
+} from "../lib/scouter-ingest";
+import {
+  applyScouterParticipantCorrection,
+  buildScouterConfirmModal,
+  buildScouterGameEditModal,
+  buildScouterParticipantEditModal,
+  buildScouterReviewComponents,
+  buildScouterReviewEmbed,
+  parseScouterReviewState,
+  requireScouterConfirmationReady,
+  applyScouterGameCorrection,
+  SCOUTER_REVIEW_IDS,
+  type ScouterReviewState,
+} from "../lib/scouter-review";
 import {
   getScouterImagePublicUrl,
   uploadScouterImage,
@@ -160,7 +181,7 @@ export async function handleUploadModal(
       }),
     ]);
 
-    const result = await submitScouterGame({
+    const draft = await extractScouterDraft({
       scoreboardImagePath: scoreboardImage.path,
       detailsImagePath: detailsImage.path,
       gameOrdinal: state.gameOrdinal,
@@ -169,7 +190,226 @@ export async function handleUploadModal(
       ...(state.gameOrdinal > 1 ? { scouterMatchId: state.matchScopeId } : {}),
     });
 
+    const reviewState: ScouterReviewState = {
+      draftId: draft.draftId,
+      totalGames: state.totalGames,
+      ownerDiscordId: state.ownerDiscordId,
+    };
+    await requirePublicMessage(interaction.message).edit({
+      embeds: [
+        buildScouterReviewEmbed(draft, state.gameOrdinal, interaction.user.id),
+      ],
+      components: buildScouterReviewComponents(draft, reviewState),
+    });
+    await interaction.editReply(
+      `OCR draft ready for game ${state.gameOrdinal}. Review the public message; nothing has been recorded yet.`,
+    );
+  } catch (error) {
+    await interaction.editReply(formatScouterError(error));
+  }
+}
+
+export async function handleReviewSelect(
+  interaction: StringSelectMenuInteraction,
+): Promise<void> {
+  const { state } = parseScouterReviewState(
+    interaction.customId,
+    SCOUTER_REVIEW_IDS.edit,
+  );
+  if (!hasReviewAccess(interaction.user.id, interaction.member, state)) {
+    await interaction.reply({
+      content: "Only the still-authorized host can edit this scouter draft.",
+      ephemeral: true,
+    });
+    return;
+  }
+
+  try {
+    const participantIndex = Number(interaction.values[0]);
+    if (
+      !Number.isInteger(participantIndex) ||
+      participantIndex < 0 ||
+      participantIndex > 9
+    ) {
+      throw new Error("Selected scouter participant is invalid.");
+    }
+    const draft = await getScouterDraft(state.draftId, interaction.user.id);
+    if (draft.status !== "pending") {
+      throw new Error("This scouter draft is no longer pending.");
+    }
+    await interaction.showModal(
+      buildScouterParticipantEditModal(draft, state, participantIndex),
+    );
+  } catch (error) {
+    await interaction.reply({
+      content: formatScouterError(error),
+      ephemeral: true,
+    });
+  }
+}
+
+export async function handleGameEditButton(
+  interaction: ButtonInteraction,
+): Promise<void> {
+  const { state } = parseScouterReviewState(
+    interaction.customId,
+    SCOUTER_REVIEW_IDS.editGame,
+  );
+  if (!hasReviewAccess(interaction.user.id, interaction.member, state)) {
+    await interaction.reply({
+      content: "Only the still-authorized host can edit this scouter draft.",
+      ephemeral: true,
+    });
+    return;
+  }
+  try {
+    const draft = await getScouterDraft(state.draftId, interaction.user.id);
+    if (draft.status !== "pending") {
+      throw new Error("This scouter draft is no longer pending.");
+    }
+    await interaction.showModal(buildScouterGameEditModal(draft, state));
+  } catch (error) {
+    await interaction.reply({
+      content: formatScouterError(error),
+      ephemeral: true,
+    });
+  }
+}
+
+export async function handleGameEditModal(
+  interaction: ModalSubmitInteraction,
+): Promise<void> {
+  const { state } = parseScouterReviewState(
+    interaction.customId,
+    SCOUTER_REVIEW_IDS.editGameModal,
+  );
+  await interaction.deferReply({ ephemeral: true });
+  if (!hasReviewAccess(interaction.user.id, interaction.member, state)) {
+    await interaction.editReply(
+      "Only the still-authorized host can edit this scouter draft.",
+    );
+    return;
+  }
+  try {
+    const current = await getScouterDraft(state.draftId, interaction.user.id);
+    const gameOrdinal = requireDraftNumber(current.gameOrdinal, "game ordinal");
+    const revised = await reviseScouterDraft({
+      draftId: state.draftId,
+      hostedByDiscordId: interaction.user.id,
+      expectedRevision: current.revision,
+      game: applyScouterGameCorrection(current.game, interaction.fields),
+    });
+    await requirePublicMessage(interaction.message).edit({
+      embeds: [
+        buildScouterReviewEmbed(revised, gameOrdinal, interaction.user.id),
+      ],
+      components: buildScouterReviewComponents(revised, state),
+    });
+    await interaction.editReply(
+      `Updated game details. Review revision ${revised.revision} before confirming.`,
+    );
+  } catch (error) {
+    await interaction.editReply(formatScouterError(error));
+  }
+}
+
+export async function handleReviewEditModal(
+  interaction: ModalSubmitInteraction,
+): Promise<void> {
+  const { state, participantIndex } = parseScouterReviewState(
+    interaction.customId,
+    SCOUTER_REVIEW_IDS.editModal,
+  );
+  await interaction.deferReply({ ephemeral: true });
+  if (!hasReviewAccess(interaction.user.id, interaction.member, state)) {
+    await interaction.editReply(
+      "Only the still-authorized host can edit this scouter draft.",
+    );
+    return;
+  }
+
+  try {
+    if (participantIndex === undefined) {
+      throw new Error("Selected scouter participant is invalid.");
+    }
+    const current = await getScouterDraft(state.draftId, interaction.user.id);
+    const gameOrdinal = requireDraftNumber(current.gameOrdinal, "game ordinal");
+    const revisedGame = applyScouterParticipantCorrection(
+      current.game,
+      participantIndex,
+      interaction.fields,
+    );
+    const revised = await reviseScouterDraft({
+      draftId: state.draftId,
+      hostedByDiscordId: interaction.user.id,
+      expectedRevision: current.revision,
+      game: revisedGame,
+    });
+    await requirePublicMessage(interaction.message).edit({
+      embeds: [
+        buildScouterReviewEmbed(revised, gameOrdinal, interaction.user.id),
+      ],
+      components: buildScouterReviewComponents(revised, state),
+    });
+    await interaction.editReply(
+      `Updated participant ${participantIndex + 1}. Review revision ${revised.revision} before confirming.`,
+    );
+  } catch (error) {
+    await interaction.editReply(formatScouterError(error));
+  }
+}
+
+export async function handleConfirmButton(
+  interaction: ButtonInteraction,
+): Promise<void> {
+  const { state } = parseScouterReviewState(
+    interaction.customId,
+    SCOUTER_REVIEW_IDS.confirm,
+  );
+  if (!hasReviewAccess(interaction.user.id, interaction.member, state)) {
+    await interaction.reply({
+      content: "Only the still-authorized host can confirm this scouter draft.",
+      ephemeral: true,
+    });
+    return;
+  }
+  await interaction.showModal(buildScouterConfirmModal(state));
+}
+
+export async function handleConfirmModal(
+  interaction: ModalSubmitInteraction,
+): Promise<void> {
+  const { state } = parseScouterReviewState(
+    interaction.customId,
+    SCOUTER_REVIEW_IDS.confirmModal,
+  );
+  await interaction.deferReply({ ephemeral: true });
+  if (!hasReviewAccess(interaction.user.id, interaction.member, state)) {
+    await interaction.editReply(
+      "Only the still-authorized host can confirm this scouter draft.",
+    );
+    return;
+  }
+
+  try {
+    const current = await getScouterDraft(state.draftId, interaction.user.id);
+    const gameOrdinal = requireDraftNumber(current.gameOrdinal, "game ordinal");
+    const seasonId = current.seasonId;
+    if (!seasonId) {
+      throw new Error("Scouter draft is missing its season scope.");
+    }
+    const identityOverrideReason = requireScouterConfirmationReady(
+      current,
+      interaction.fields.getTextInputValue("override_reason"),
+    );
+    const result = await confirmScouterDraft({
+      draftId: state.draftId,
+      hostedByDiscordId: interaction.user.id,
+      expectedRevision: current.revision,
+      ...(identityOverrideReason ? { identityOverrideReason } : {}),
+    });
     const publicMessage = requirePublicMessage(interaction.message);
+
     if (result.code === "existing") {
       await publicMessage.edit({
         embeds: [
@@ -183,18 +423,20 @@ export async function handleUploadModal(
       return;
     }
 
-    if (state.gameOrdinal < state.totalGames) {
+    if (gameOrdinal < state.totalGames) {
       const nextState: UploadState = {
-        ...state,
         matchScopeId: result.scouterMatchId,
-        gameOrdinal: state.gameOrdinal + 1,
+        gameOrdinal: gameOrdinal + 1,
+        totalGames: state.totalGames,
+        seasonId,
+        ownerDiscordId: state.ownerDiscordId,
       };
       await publicMessage.edit({
         embeds: [
           buildScouterProgressEmbed(
             nextState,
             interaction.user.id,
-            state.gameOrdinal,
+            gameOrdinal,
           ),
         ],
         components: [
@@ -204,45 +446,58 @@ export async function handleUploadModal(
         ],
       });
       await interaction.editReply(
-        `✅ Game ${state.gameOrdinal} recorded. Use the public upload button for game ${nextState.gameOrdinal}.`,
+        `✅ Game ${gameOrdinal} confirmed and recorded. Use the public upload button for game ${nextState.gameOrdinal}.`,
       );
       return;
     }
 
-    const receipt = await getScouterMatchReceipt(db, result.scouterMatchId);
-    const files = receipt.games.flatMap((game) => [
-      {
-        attachment: getScouterImagePublicUrl(db, game.scoreboardImagePath),
-        name: attachmentName(
-          game.gameOrdinal,
-          "scoreboard",
-          game.scoreboardImagePath,
-        ),
-      },
-      {
-        attachment: getScouterImagePublicUrl(db, game.detailsImagePath),
-        name: attachmentName(
-          game.gameOrdinal,
-          "details",
-          game.detailsImagePath,
-        ),
-      },
-    ]);
-
-    await publicMessage.edit({
-      embeds: [
-        buildScouterReceiptEmbed(
-          receipt,
-          interaction.user.id,
-          result.receiptUrl,
-        ),
-      ],
-      components: [],
-      files,
-    });
-    await publicMessage.react("✅");
+    await publishFinalScouterReceipt(
+      publicMessage,
+      result.scouterMatchId,
+      result.receiptUrl,
+      interaction.user.id,
+    );
     await interaction.editReply(
       `✅ Scouter match recorded: ${publicMessage.url}`,
+    );
+  } catch (error) {
+    await interaction.editReply(formatScouterError(error));
+  }
+}
+
+export async function handleCancelButton(
+  interaction: ButtonInteraction,
+): Promise<void> {
+  const { state } = parseScouterReviewState(
+    interaction.customId,
+    SCOUTER_REVIEW_IDS.cancel,
+  );
+  await interaction.deferReply({ ephemeral: true });
+  if (!hasReviewAccess(interaction.user.id, interaction.member, state)) {
+    await interaction.editReply(
+      "Only the still-authorized host can cancel this scouter draft.",
+    );
+    return;
+  }
+  try {
+    const result = await cancelScouterDraft(state.draftId, interaction.user.id);
+    await interaction.message.edit({
+      embeds: [
+        new EmbedBuilder()
+          .setColor(0x747f8d)
+          .setTitle("Scouter Draft Cancelled")
+          .setDescription(
+            "No canonical scouter game was written from this draft.",
+          )
+          .addFields({ name: "Host", value: `<@${interaction.user.id}>` })
+          .setTimestamp(),
+      ],
+      components: [],
+    });
+    await interaction.editReply(
+      result.code === "already_cancelled"
+        ? "This draft was already cancelled."
+        : "Draft cancelled.",
     );
   } catch (error) {
     await interaction.editReply(formatScouterError(error));
@@ -378,8 +633,8 @@ function buildScouterProgressEmbed(
   completedGame?: number,
 ): EmbedBuilder {
   const description = completedGame
-    ? `Game ${completedGame} is recorded. The host can now upload game ${state.gameOrdinal}.`
-    : `The host can upload game ${state.gameOrdinal}. This message will become the final receipt.`;
+    ? `Game ${completedGame} is confirmed. The host can now upload game ${state.gameOrdinal}.`
+    : `The host can upload game ${state.gameOrdinal}. This message will become the final receipt after every game is reviewed and confirmed.`;
   return new EmbedBuilder()
     .setColor(0x5865f2)
     .setTitle("Scouter Match Upload")
@@ -394,7 +649,7 @@ function buildScouterProgressEmbed(
       { name: "Season", value: state.seasonId, inline: true },
     )
     .setFooter({
-      text: "Original screenshots will be attached here after OCR succeeds.",
+      text: "Each OCR result must be reviewed before it is recorded.",
     })
     .setTimestamp();
 }
@@ -414,6 +669,35 @@ function buildAlreadyRecordedEmbed(
     .setTimestamp();
 }
 
+async function publishFinalScouterReceipt(
+  publicMessage: Message,
+  scouterMatchId: string,
+  receiptUrl: string,
+  hostedByDiscordId: string,
+) {
+  const receipt = await getScouterMatchReceipt(db, scouterMatchId);
+  const files = receipt.games.flatMap((game) => [
+    {
+      attachment: getScouterImagePublicUrl(db, game.scoreboardImagePath),
+      name: attachmentName(
+        game.gameOrdinal,
+        "scoreboard",
+        game.scoreboardImagePath,
+      ),
+    },
+    {
+      attachment: getScouterImagePublicUrl(db, game.detailsImagePath),
+      name: attachmentName(game.gameOrdinal, "details", game.detailsImagePath),
+    },
+  ]);
+  await publicMessage.edit({
+    embeds: [buildScouterReceiptEmbed(receipt, hostedByDiscordId, receiptUrl)],
+    components: [],
+    files,
+  });
+  await publicMessage.react("✅");
+}
+
 function serializeUploadState(
   prefix: typeof BUTTON_PREFIX | typeof MODAL_PREFIX,
   state: UploadState,
@@ -426,8 +710,9 @@ function serializeUploadState(
     encodeStateIdentifier(state.seasonId),
     encodeURIComponent(state.ownerDiscordId),
   ].join(":");
-  if (customId.length > 100)
+  if (customId.length > 100) {
     throw new Error("Scouter upload state exceeds Discord limits.");
+  }
   return customId;
 }
 
@@ -450,6 +735,23 @@ function decodeStateIdentifier(value: string): string {
   return `${uuid.slice(0, 8)}-${uuid.slice(8, 12)}-${uuid.slice(12, 16)}-${uuid.slice(16, 20)}-${uuid.slice(20)}`;
 }
 
+function hasReviewAccess(
+  userId: string,
+  member: ButtonInteraction["member"],
+  state: ScouterReviewState,
+) {
+  return (
+    userId === state.ownerDiscordId && hasCommandAccess(member, "log-scouter")
+  );
+}
+
+function requireDraftNumber(value: number | undefined, label: string) {
+  if (!Number.isInteger(value) || (value ?? 0) < 1) {
+    throw new Error(`Scouter draft is missing its ${label}.`);
+  }
+  return value as number;
+}
+
 function toScouterAttachment(attachment: Attachment) {
   return {
     id: attachment.id,
@@ -461,10 +763,11 @@ function toScouterAttachment(attachment: Attachment) {
 }
 
 function requirePublicMessage(message: Message | null): Message {
-  if (!message)
+  if (!message) {
     throw new Error(
       "Could not locate the public scouter upload message. Run /log-scouter again.",
     );
+  }
   return message;
 }
 
@@ -482,9 +785,9 @@ function formatScouterError(error: unknown): string {
     const raw = error.rawResponse
       ? `\n\nRaw OCR response:\n\`\`\`\n${error.rawResponse.slice(0, 1200)}\n\`\`\``
       : "";
-    return `Scouter ingest failed: ${error.message}${raw}`.slice(0, 1900);
+    return `Scouter workflow failed: ${error.message}${raw}`.slice(0, 1900);
   }
-  return `Scouter upload failed: ${error instanceof Error ? error.message : String(error)}`.slice(
+  return `Scouter workflow failed: ${error instanceof Error ? error.message : String(error)}`.slice(
     0,
     1900,
   );

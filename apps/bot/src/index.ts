@@ -182,6 +182,8 @@ client.on('interactionCreate', async (interaction) => {
         await reschedule.handleMatchSelect(interaction);
       } else if (id.startsWith('profile_season:')) {
         await profile.handleSeasonSelect(interaction);
+      } else if (id.startsWith('sc_ed:')) {
+        await logScouter.handleReviewSelect(interaction);
       }
       return;
     }
@@ -190,6 +192,18 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.isButton()) {
       if (interaction.customId.startsWith('sc_up:')) {
         await logScouter.handleUploadButton(interaction);
+        return;
+      }
+      if (interaction.customId.startsWith('sc_cf:')) {
+        await logScouter.handleConfirmButton(interaction);
+        return;
+      }
+      if (interaction.customId.startsWith('sc_eg:')) {
+        await logScouter.handleGameEditButton(interaction);
+        return;
+      }
+      if (interaction.customId.startsWith('sc_ca:')) {
+        await logScouter.handleCancelButton(interaction);
         return;
       }
 
@@ -230,6 +244,12 @@ client.on('interactionCreate', async (interaction) => {
         await handleRejectStatModal(interaction, statRecordId);
       } else if (id.startsWith('sc_modal:')) {
         await logScouter.handleUploadModal(interaction);
+      } else if (id.startsWith('sc_em:')) {
+        await logScouter.handleReviewEditModal(interaction);
+      } else if (id.startsWith('sc_gm:')) {
+        await logScouter.handleGameEditModal(interaction);
+      } else if (id.startsWith('sc_cm:')) {
+        await logScouter.handleConfirmModal(interaction);
       }
       return;
     }
