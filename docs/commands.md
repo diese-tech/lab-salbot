@@ -220,9 +220,11 @@ current-season roster row.
 
 **Flow:** Run the command in the channel where the permanent receipt should live. The optional `games` value defaults to 2 (maximum 5). SALBot posts one public, host-locked upload message. For each game, the host opens a modal and uploads the matching SMITE 2 **SCOREBOARD** and **DETAILS** screenshots.
 
-SALBot copies both originals to the `match-screenshots` audit bucket, calls sal-site with the existing internal bearer token, and waits for OCR plus the atomic database write. After each successful game, the same public message advances to the next upload. After the last game it becomes the final receipt, includes winners and player-link counts, attaches all original screenshots, links to the sal-site receipt, and receives a ✅ reaction.
+SALBot copies both originals to the `match-screenshots` audit bucket, calls sal-site with the existing internal bearer token, and creates a private database-backed OCR draft. The public message then shows the game details, all ten extracted participants, and the complete persisted stat set. The still-authorized host can edit game metadata or select a participant to correct OCR fields, then review the new revision. Nothing becomes a canonical scouter game until the host explicitly confirms it.
 
-Structurally invalid OCR output is returned privately to the host with the raw model response and writes no game. A repeated SMITE match ID links the existing receipt and does not write a duplicate. Unrecognized IGNs are recorded as unlinked participants and listed on the receipt for follow-up.
+Duplicate IGNs block confirmation until corrected. Unlinked or ambiguous IGNs require an audited override reason. Confirmation atomically writes the canonical game, participants, and audit record; cancellation leaves no canonical game. After each confirmed game, the same public message advances to the next upload. After the last game it becomes the final receipt, includes winners and player-link counts, attaches all original screenshots, links to the sal-site receipt, and receives a ✅ reaction.
+
+Structurally invalid OCR output is returned privately to the host with the raw model response and writes no game. A repeated SMITE match ID links the existing receipt and does not write a duplicate.
 
 Requires `SAL_SITE_URL` and `SAL_SITE_INTERNAL_TOKEN`; the token must match sal-site's `INTERNAL_SERVICE_TOKEN`.
 
