@@ -68,12 +68,10 @@ Feature-specific variables:
 - `SAL_SITE_URL` and `SAL_SITE_INTERNAL_TOKEN` deliver durable standings
   recalculation events. Missing or invalid values cause bounded outbox retries
   and eventual dead-lettering; database decisions remain committed.
-- `OPENROUTER_API_KEY` enables `/rules`; `OPENROUTER_MODEL_RULES` selects its
-  cheap/free text model. Task-specific model variables fall back to the legacy
-  `OPENROUTER_MODEL`, then the committed default.
-- `OPENROUTER_MODEL_VISION` reserves a multimodal model for image extraction.
-  The current scouter OCR call runs in sal-site, where the same variable must
-  be configured.
+- The bot does not currently require OpenRouter: `/rules` is temporarily
+  unregistered, and scouter OCR runs in sal-site. Configure
+  `OPENROUTER_API_KEY` and the selected vision-model variable in Vercel, not as
+  a substitute bot-side setting.
 
 The process fails fast when a startup-required variable is absent. Missing
 channel variables are logged at startup and fail only the affected workflow.

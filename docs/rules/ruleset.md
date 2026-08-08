@@ -1,6 +1,8 @@
 # SAL Ruleset
 
-Official rules for the Serpent Ascension League. This document is the authoritative source for the `/rules` bot command.
+Historical repository placeholder for the Serpent Ascension League rules. It
+is not the live sal-site rules source, and `/rules` remains unregistered until
+the bot consumes that live contract.
 
 Admins author and maintain this file. All rulings are final at admin discretion.
 

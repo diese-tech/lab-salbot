@@ -18,7 +18,6 @@ handlers, database contracts, permissions, and deployment configuration ship.
 | `/report-result`        | SAL Operators / Admins | Report a completed match's score. Posts a public receipt, opens a proof-upload thread, and sends the result to admin review. |
 | `/reschedule`           | Captains          | Request a new date/time for an upcoming match. Posts a public receipt and sends the request to admin review.                 |
 | `/request-admin-review` | Everyone          | Escalate an issue (score dispute, scheduling, eligibility, other) directly to admins. No public receipt.                     |
-| `/rules`                | Everyone          | Ask a question about the league ruleset. Answered by an AI assistant restricted to the official rules text.                  |
 | `/update-ign`           | Everyone          | Request an in-game name change with screenshot proof. **Not yet implemented** — replies asking you to see an admin for now.  |
 | `/division-role-config` | Admins            | Map a division (`solar`/`lunar`/`terra`) to a Discord role, or list current mappings.                                        |
 | `/division-sync`        | Admins            | Bulk-link players' Discord accounts and sync division roles from a roster CSV. Preview, then apply.                          |
@@ -31,6 +30,26 @@ handlers, database contracts, permissions, and deployment configuration ship.
 does not grant or deny these two command capabilities. Other current
 "Captains" and "Admins" entries retain their documented command-specific
 identity checks.
+
+### Registered command classification
+
+| Command | Classification | Delivery state |
+| --- | --- | --- |
+| `/report-result` | Operator/admin-only | Live |
+| `/reschedule` | Captain-only | Live |
+| `/request-admin-review` | Public | Live |
+| `/update-ign` | Stub | Registered, but intentionally performs no mutation |
+| `/division-role-config` | Admin-only | Live |
+| `/division-sync` | Admin-only | Live |
+| `/log-scouter` | Operator/admin-only | Live |
+| `/profile` | Public | Live |
+| `/help` | Public | Live |
+
+`/rules` is temporarily unregistered and absent from `/help`. Its repository
+markdown is not the live sal-site rules source, so registering it would present
+placeholder content as authoritative. Restore it only after it consumes the
+live sal-site rules assistant/source contract. The ADR-009 commands below are
+planned-only and remain outside the Discord guild manifest.
 
 ---
 
@@ -170,17 +189,6 @@ state.
 
 **On submit:** posts only an admin review card — no public receipt (the issue may be sensitive) and no linked match (there is no match picker on this command).
 
-### `/rules`
-
-**Who:** Everyone.
-
-**Flow:** takes a free-text `question`, sends it plus the full ruleset text to OpenRouter with a system prompt that restricts answers to that ruleset, and returns the answer in an embed citing the section(s) used.
-
-Requires `OPENROUTER_API_KEY`. `OPENROUTER_MODEL_RULES` selects the text model
-for this command; it falls back to the legacy `OPENROUTER_MODEL`, then
-`google/gemini-2.0-flash-001`. Without a working key, the command fails
-gracefully with a message telling the user to ask an admin directly.
-
 ### `/update-ign`
 
 **Status: not implemented.** The command is registered and appears in Discord's command list, but running it just replies with an ephemeral message telling the player to ask an admin — the actual IGN-change flow (screenshot proof, admin review card) is Phase 2 work.
@@ -218,7 +226,7 @@ Posts the Quick Reference table above as an embed, plus a link to this document 
 Authorization is not scoped to a division, organization, linked player, or
 current-season roster row.
 
-**Flow:** Run the command in the channel where the permanent receipt should live. The optional `games` value defaults to 2 (maximum 5). SALBot posts one public, host-locked upload message. For each game, the host opens a modal and uploads the matching SMITE 2 **SCOREBOARD** and **DETAILS** screenshots.
+**Flow:** Run the command in the channel where the permanent receipt should live. The optional `games` value defaults to 2 (maximum 5). SALBot posts one public, host-locked upload message. For each game, the host opens a modal and uploads the matching SMITE 2 **SCOREBOARD** and **DETAILS** screenshots. Each image must be 10 MiB or smaller, matching the canonical `match-screenshots` bucket limit.
 
 SALBot copies both originals to the `match-screenshots` audit bucket, calls sal-site with the existing internal bearer token, and creates a private database-backed OCR draft. The public message then shows the game details, all ten extracted participants, and the complete persisted stat set. The still-authorized host can edit game metadata or select a participant to correct OCR fields, then review the new revision. Nothing becomes a canonical scouter game until the host explicitly confirms it.
 
