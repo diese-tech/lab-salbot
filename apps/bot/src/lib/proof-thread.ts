@@ -20,10 +20,10 @@ export async function createProofThread(
   });
 
   const trackingMsg = await thread.send(
-    `📸 **Proof upload thread** — Week ${week} ${matchLabel}\n\n` +
-    `Upload your scoreboard screenshots here.\n` +
-    `Progress: **0 / ${expectedScreenshots}** screenshots\n\n` +
-    `_Both captains may upload. This thread closes when the result is approved or denied._`
+    `📊 **Match stats review thread** — Week ${week} ${matchLabel}\n\n` +
+    `The verified host should use **Enter stats** below and upload each game screenshot once on the SAL review page.\n` +
+    `Screenshots are kept in durable storage and mirrored here after host submission.\n\n` +
+    `_Do not upload duplicate screenshots directly to Discord. This thread closes after the final admin decision._`
   );
 
   await setProofThread(db, matchId, thread.id, thread.url, expectedScreenshots);

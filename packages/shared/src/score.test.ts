@@ -7,7 +7,7 @@ describe("parseScore", () => {
       winnerGames: 2,
       loserGames: 1,
       gamesPlayed: 3,
-      expectedScreenshots: 6,
+      expectedScreenshots: 3,
     });
   });
 
@@ -16,7 +16,7 @@ describe("parseScore", () => {
       winnerGames: 2,
       loserGames: 0,
       gamesPlayed: 2,
-      expectedScreenshots: 4,
+      expectedScreenshots: 2,
     });
   });
 

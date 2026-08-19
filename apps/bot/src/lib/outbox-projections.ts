@@ -1,10 +1,18 @@
-import { EmbedBuilder, type Client, type Message } from 'discord.js';
+import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  EmbedBuilder,
+  type Client,
+  type Message,
+} from 'discord.js';
 import {
   getMatchById,
   getPendingAction,
   type OperationOutboxRow,
   type SupabaseClient,
 } from '@salbot/db';
+import type { MatchResultPayload } from '@salbot/shared';
 import { getAdminReviewChannelId, getResultsChannelId, getReschedulesChannelId } from './channels';
 import {
   applyApprovedStatus,
@@ -22,7 +30,10 @@ export function projectionMarker(outboxId: string): string {
 }
 
 function messageHasProjection(message: Message, outboxId: string): boolean {
-  const marker = projectionMarker(outboxId);
+  return messageHasMarker(message, projectionMarker(outboxId));
+}
+
+function messageHasMarker(message: Message, marker: string): boolean {
   return message.content.includes(marker)
     || message.embeds.some((embed) => embed.footer?.text?.includes(marker));
 }
@@ -55,6 +66,9 @@ async function projectReview(
   db: SupabaseClient,
   row: OperationOutboxRow,
 ): Promise<string> {
+  if (row.aggregate_type === 'match_report') {
+    return projectSubmittedMatchReport(client, row);
+  }
   if (row.aggregate_type === 'pending_stat_record') {
     // Legacy stat review records have no Discord message reference. The
     // decision RPC is still authoritative; there is no safe projection target
@@ -79,12 +93,127 @@ async function projectReview(
   }
   const message = await channel.messages.fetch(action.admin_review_message_id);
   const embed = existingEmbed(message);
+  if (status === 'approved' && action.type === 'match_result') {
+    if (!action.match_id) throw new Error(`Match-result action ${action.id} has no match`);
+    const match = await getMatchById(db, action.match_id);
+    if (!match) throw new Error(`Match ${action.match_id} not found`);
+    applyAuthoritativeMatchResult(embed, action.payload_json as MatchResultPayload, match);
+  }
   applyDecisionStatus(embed, status, actorDiscordId, action.admin_note);
   await message.edit({
     embeds: [embed],
     ...(status === 'pending_info' ? {} : { components: [] }),
   });
   return message.id;
+}
+
+async function projectSubmittedMatchReport(
+  client: Client,
+  row: OperationOutboxRow,
+): Promise<string> {
+  if (row.event_type !== 'match_report_host_submitted') {
+    throw new Error(`Unsupported match report event: ${row.event_type}`);
+  }
+  const reportId = requiredString(row.payload.reportId, 'reportId');
+  const pendingActionId = requiredString(row.payload.pendingActionId, 'pendingActionId');
+  const matchId = requiredString(row.payload.matchId, 'matchId');
+  const hostDiscordId = requiredString(row.payload.hostDiscordId, 'hostDiscordId');
+  const proofThreadId = optionalString(row.payload.proofThreadId);
+  const screenshotUrls = requiredUrlArray(row.payload.screenshotUrls, 'screenshotUrls');
+
+  const proofMessageIds: string[] = [];
+  let proofThreadUnavailable = !proofThreadId;
+  if (proofThreadId) {
+    let proofThread = null;
+    try {
+      const channel = await client.channels.fetch(proofThreadId);
+      if (channel?.isThread()) proofThread = channel;
+    } catch {
+      // A deleted or otherwise stale Discord channel reference must not block
+      // the durable admin-review projection.
+    }
+    if (!proofThread) {
+      proofThreadUnavailable = true;
+    } else {
+      const wasArchived = proofThread.archived;
+      if (wasArchived) await proofThread.setArchived(false);
+      try {
+        // Official reports contain at most five screenshots, so the latest 100
+        // messages comfortably retain every stable projection marker on retry.
+        const existingProofMessages = await proofThread.messages.fetch({ limit: 100 });
+        for (const [index, screenshotUrl] of screenshotUrls.entries()) {
+          const marker = `${projectionMarker(row.id)}:screenshot:${index}`;
+          const existing = existingProofMessages.find((message) => messageHasMarker(message, marker));
+          if (existing) {
+            proofMessageIds.push(existing.id);
+            continue;
+          }
+          const sent = await proofThread.send({
+            embeds: [
+              new EmbedBuilder()
+                .setTitle(`Match stats screenshot ${index + 1} of ${screenshotUrls.length}`)
+                .setDescription('Uploaded through the host correction flow and mirrored from durable storage.')
+                .setFooter({ text: marker })
+                .setTimestamp(),
+            ],
+            files: [{
+              attachment: screenshotUrl,
+              name: screenshotFilename(reportId, screenshotUrl, index),
+            }],
+          });
+          proofMessageIds.push(sent.id);
+        }
+      } finally {
+        if (wasArchived) await proofThread.setArchived(true);
+      }
+    }
+  }
+
+  const adminChannel = await client.channels.fetch(getAdminReviewChannelId());
+  if (!adminChannel?.isTextBased() || !('messages' in adminChannel)) {
+    throw new Error('Admin review channel is not text based');
+  }
+  const adminMarker = `${projectionMarker(row.id)}:admin-review`;
+  const existingAdminMessages = await adminChannel.messages.fetch({ limit: 100 });
+  let adminMessage = existingAdminMessages.find((message) =>
+    messageHasMarker(message, adminMarker));
+  if (!adminMessage) {
+    if (!('send' in adminChannel)) {
+      throw new Error('Admin review channel cannot send messages');
+    }
+    const reviewUrl = adminMatchReportUrl(reportId);
+    const embed = new EmbedBuilder()
+      .setColor(0x5865f2)
+      .setTitle('Match stats ready for admin review')
+      .setDescription('The host submitted corrected OCR results. Final publication remains admin-only.')
+      .addFields(
+        { name: 'Match report', value: reportId },
+        { name: 'Pending action', value: pendingActionId },
+        { name: 'Match', value: matchId, inline: true },
+        { name: 'Submitted by', value: `<@${hostDiscordId}>`, inline: true },
+        { name: 'Screenshots', value: String(screenshotUrls.length), inline: true },
+      )
+      .setFooter({ text: adminMarker })
+      .setTimestamp();
+    if (proofThreadUnavailable) {
+      embed.addFields({
+        name: 'Proof thread',
+        value: 'Unavailable — screenshots remain in durable storage.',
+      });
+    }
+    adminMessage = await adminChannel.send({
+      embeds: [embed],
+      components: [
+        new ActionRowBuilder<ButtonBuilder>().addComponents(
+          new ButtonBuilder()
+            .setLabel('Review match stats')
+            .setStyle(ButtonStyle.Link)
+            .setURL(reviewUrl),
+        ),
+      ],
+    });
+  }
+  return [...proofMessageIds, adminMessage.id].join(',');
 }
 
 async function projectReceipt(
@@ -111,6 +240,9 @@ async function projectReceipt(
   }
   const message = await channel.messages.fetch(action.public_receipt_message_id);
   const embed = existingEmbed(message);
+  if (status === 'approved' && action.type === 'match_result') {
+    applyAuthoritativeMatchResult(embed, action.payload_json as MatchResultPayload, match);
+  }
   applyDecisionStatus(embed, status, actorDiscordId, action.admin_note);
   await message.edit({ embeds: [embed] });
   return message.id;
@@ -226,4 +358,59 @@ function requiredString(value: unknown, label: string): string {
 
 function optionalString(value: unknown): string | null {
   return typeof value === 'string' && value.length > 0 ? value : null;
+}
+
+function applyAuthoritativeMatchResult(
+  embed: EmbedBuilder,
+  payload: MatchResultPayload,
+  match: Awaited<ReturnType<typeof getMatchById>>,
+): void {
+  const homeOrg = match?.home_org as unknown as { id: string; name: string } | null;
+  const awayOrg = match?.away_org as unknown as { id: string; name: string } | null;
+  const winnerOrg = payload.winnerOrgId === homeOrg?.id
+    ? homeOrg
+    : payload.winnerOrgId === awayOrg?.id
+      ? awayOrg
+      : null;
+  if (!winnerOrg) {
+    throw new Error(`Reviewed winner ${payload.winnerOrgId} is not part of match ${match?.id ?? 'unknown'}`);
+  }
+  const fields = embed.toJSON().fields ?? [];
+  embed.setFields(fields.map((field) => {
+    if (field.name === 'Reported Winner') return { ...field, value: winnerOrg.name };
+    if (field.name === 'Score') return { ...field, value: payload.score };
+    return field;
+  }));
+}
+
+function requiredUrlArray(value: unknown, label: string): string[] {
+  if (!Array.isArray(value) || value.some((item) => !isAbsoluteHttpUrl(item))) {
+    throw new Error(`Outbox payload ${label} must be an array of HTTP URLs`);
+  }
+  return value;
+}
+
+function isAbsoluteHttpUrl(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' || url.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
+
+function adminMatchReportUrl(reportId: string): string {
+  const siteUrl = process.env.SAL_SITE_URL;
+  if (!siteUrl) throw new Error('SAL_SITE_URL is required for match report review projections');
+  const url = new URL('/admin/tickets', siteUrl);
+  url.searchParams.set('ticket', `match_report:${reportId}`);
+  return url.toString();
+}
+
+function screenshotFilename(reportId: string, screenshotUrl: string, index: number): string {
+  const sourceName = (new URL(screenshotUrl).pathname.split('/').pop() ?? '')
+    .replace(/[^a-zA-Z0-9._-]/g, '-')
+    .slice(-80);
+  return `match-report-${reportId}-${index + 1}-${sourceName || 'screenshot.png'}`;
 }

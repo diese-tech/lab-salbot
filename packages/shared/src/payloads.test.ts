@@ -25,7 +25,7 @@ describe("pending action payload validation", () => {
         winnerGames: 2,
         loserGames: 1,
         gamesPlayed: 3,
-        expectedScreenshots: 6,
+        expectedScreenshots: 3,
       },
     });
   });

@@ -40,7 +40,8 @@ export function buildMatchResultReceiptEmbed(
   match: MatchInfo,
   winnerOrg: OrgInfo,
   score: string,
-  captainDiscordId: string
+  captainDiscordId: string,
+  pendingActionId: string,
 ) {
   return new EmbedBuilder()
     .setColor(COLOR.pending)
@@ -53,7 +54,7 @@ export function buildMatchResultReceiptEmbed(
       { name: 'Score', value: score, inline: true },
       { name: 'Submitted By', value: `<@${captainDiscordId}>`, inline: true },
     )
-    .setFooter({ text: 'Pending admin review' })
+    .setFooter({ text: `Pending admin review • Action ID: ${pendingActionId}` })
     .setTimestamp();
 }
 
@@ -66,7 +67,10 @@ export function buildMatchResultAdminEmbed(
 ) {
   return new EmbedBuilder()
     .setColor(COLOR.pending)
-    .setTitle(`${STATUS_EMOJI.pending} Match Result Pending Review`)
+    .setTitle(`${STATUS_EMOJI.pending} Match Result — Waiting for Host Stats`)
+    .setDescription(
+      'The reported score is not ready for final approval. The host must submit match stats before the unified admin review.',
+    )
     .addFields(
       { name: 'Match', value: `Week ${match.week} — ${match.home_org.tag} vs ${match.away_org.tag}`, inline: true },
       { name: 'Division', value: match.division.name, inline: true },
@@ -77,6 +81,28 @@ export function buildMatchResultAdminEmbed(
     )
     .setFooter({ text: `Action ID: ${pendingActionId}` })
     .setTimestamp();
+}
+
+export function buildMatchResultWaitingButtons(pendingActionId: string) {
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`deny:${pendingActionId}`)
+      .setLabel('Deny')
+      .setStyle(ButtonStyle.Danger),
+    new ButtonBuilder()
+      .setCustomId(`needs_info:${pendingActionId}`)
+      .setLabel('⚠️ Needs Info')
+      .setStyle(ButtonStyle.Secondary),
+  );
+}
+
+export function buildEnterStatsButton(reportId: string) {
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`mr_stats:${reportId}`)
+      .setLabel('Enter stats')
+      .setStyle(ButtonStyle.Primary),
+  );
 }
 
 export function buildRescheduleReceiptEmbed(
