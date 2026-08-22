@@ -31,6 +31,9 @@ async function main() {
     logScouter,
     profile,
     help,
+    trade,
+    captainRoleConfig,
+    organizationRoleConfig,
   ] = await Promise.all([
     import('../src/commands/report-result'),
     import('../src/commands/reschedule'),
@@ -42,6 +45,9 @@ async function main() {
     import('../src/commands/log-scouter'),
     import('../src/commands/profile'),
     import('../src/commands/help'),
+    import('../src/commands/trade'),
+    import('../src/commands/captain-role-config'),
+    import('../src/commands/organization-role-config'),
   ]);
 
   const commands = [
@@ -55,6 +61,9 @@ async function main() {
     logScouter.data,
     profile.data,
     help.data,
+    trade.data,
+    captainRoleConfig.data,
+    organizationRoleConfig.data,
   ];
 
   const rest = new REST().setToken(token);

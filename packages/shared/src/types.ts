@@ -1,4 +1,4 @@
-export type PendingActionType = 'match_result' | 'reschedule' | 'admin_review' | 'alias_change';
+export type PendingActionType = 'match_result' | 'reschedule' | 'admin_review' | 'alias_change' | 'roster_trade';
 
 export type PendingActionStatus =
   | 'pending'
@@ -29,6 +29,8 @@ export type AuditActionType =
   | 'discord_identity_linked'
   | 'division_role_mapping_updated'
   | 'division_role_synced'
+  | 'captain_role_mapping_updated'
+  | 'organization_role_mapping_updated'
   | 'admin_override';
 
 export type StatRecordStatus = 'pending' | 'approved' | 'rejected' | 'corrected' | 'superseded';
@@ -63,4 +65,10 @@ export interface AliasChangePayload {
   oldIgn: string;
   newIgn: string;
   proofScreenshotUrl: string;
+}
+
+export interface RosterTradePayload {
+  transactionId: string;
+  revision: number;
+  source: 'discord_workflow' | 'web_workflow' | 'manual_reconciliation' | 'migration';
 }

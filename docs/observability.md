@@ -40,6 +40,10 @@ paging on. On either:
 2. Follow **P2: Pending Actions Stuck** in `docs/runbooks/incident-handling.md`.
 3. Dead-letter rows need a human decision (retry vs. discard) — they do not
    self-heal. Query `operation_outbox where state = 'dead_letter'` to see what's stuck.
+4. Also query `operation_outbox where state = 'needs_reconciliation'` for
+   ambiguous Discord sends. Confirm the target channel first, then use the
+   database `reconcile_operation_outbox` contract to link the existing message
+   or explicitly authorize one retry.
 
 Thresholds are configurable per `OutboxLagMonitorOptions` (`warnLagSeconds`,
 `alertLagSeconds`, default 300/900) if 5/15 minutes stops being the right

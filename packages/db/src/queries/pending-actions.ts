@@ -87,7 +87,7 @@ export async function getPendingAction(db: SupabaseClient, id: string) {
 }
 
 function isPendingActionType(value: string): value is PendingActionType {
-  return ['match_result', 'reschedule', 'admin_review', 'alias_change'].includes(value);
+  return ['match_result', 'reschedule', 'admin_review', 'alias_change', 'roster_trade'].includes(value);
 }
 
 // Atomic claim — only succeeds if status is still 'pending'. Returns false if already processed.

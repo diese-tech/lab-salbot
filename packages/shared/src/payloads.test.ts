@@ -47,4 +47,21 @@ describe("pending action payload validation", () => {
       }),
     ).toThrow("issueType");
   });
+
+  it("binds roster-trade pending actions to an exact canonical revision", () => {
+    expect(parsePendingActionPayload("roster_trade", {
+      transactionId: "3bd50934-a0db-4c95-a343-124034b71801",
+      revision: 2,
+      source: "discord_workflow",
+    })).toEqual({
+      transactionId: "3bd50934-a0db-4c95-a343-124034b71801",
+      revision: 2,
+      source: "discord_workflow",
+    });
+    expect(() => parsePendingActionPayload("roster_trade", {
+      transactionId: "3bd50934-a0db-4c95-a343-124034b71801",
+      revision: 0,
+      source: "discord_workflow",
+    })).toThrow("positive integer");
+  });
 });

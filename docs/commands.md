@@ -24,6 +24,9 @@ handlers, database contracts, permissions, and deployment configuration ship.
 | `/division-sync`        | Admins            | Bulk-link players' Discord accounts and sync division roles from a roster CSV. Preview, then apply.                          |
 | `/log-scouter`          | SAL Operators / Admins | Upload SCOREBOARD and DETAILS screenshots, OCR each game, and turn the public upload message into the final scouter receipt. |
 | `/profile`              | Everyone          | View scouter totals for yourself or another Discord-linked player, switch seasons, and open the full site profile.           |
+| `/trade`                | Division captains | Propose, counter, accept, decline, withdraw, or revoke a player trade; accepted terms still require admin approval.           |
+| `/captain-role-config`  | Admins            | Set or list the canonical Captain role for Solar, Lunar, or Terra.                                                            |
+| `/organization-role-config` | Admins        | Set or list an organization's canonical Discord role.                                                                         |
 | `/help`                 | Everyone          | Show this list with a link to the full reference.                                                                            |
 
 "SAL Operators / Admins" means members holding a Discord role configured in
@@ -42,12 +45,9 @@ registered. Their names and scopes are the implementation contract.
 
 | Command                     | Who                                       | Channel scope                                                 | What it will do                                                                                                                                                      |
 | --------------------------- | ----------------------------------------- | ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/trade`                    | Division captains; admins for remediation | Matching division trade-block channel                         | Open an ephemeral offer wizard, then post a revisioned proposal with **Accept**, **Counter**, and **Decline** controls. Accepted terms still require admin approval. |
 | `/claim`                    | Division captains; admins for remediation | Matching division trade-block channel                         | Submit an available-player claim for admin approval. A pending claim does not reserve the player.                                                                    |
 | `/drop`                     | Division captains; admins for remediation | Matching division trade-block channel                         | Submit a roster drop for admin approval. A ban or suspension is an admin-only approval option.                                                                       |
 | `/draft-position-swap`      | Division captains; admins for remediation | Matching division trade-block channel; only before room start | Exchange two organizations' complete base draft positions with no other compensation.                                                                                |
-| `/captain-role-config`      | Admins                                    | Any admin-operable channel; ephemeral response                | Set or list the canonical Captain role for Solar, Lunar, or Terra.                                                                                                   |
-| `/organization-role-config` | Admins                                    | Any admin-operable channel; ephemeral response                | Set or list an organization's canonical Discord role and mobile tag.                                                                                                 |
 | `/broadcast-role-config`    | Admins                                    | Any admin-operable channel; ephemeral response                | Set or list the Caster or Production role mapping.                                                                                                                   |
 
 “Division captains” are authorized by the active season, organization,
@@ -57,7 +57,7 @@ organization may have a team in every division; authorization is resolved for
 the command channel's division rather than assigning the organization to only
 one division.
 
-### `/trade` (planned)
+### `/trade`
 
 1. Verify that the command is in the configured trade-block channel for the
    captain's division.
@@ -115,10 +115,10 @@ proposal exchanges their complete predetermined draft positions across all
 snake rounds. Counterpart consent and admin approval are required. The command
 accepts no additional compensation and closes once the division room starts.
 
-### Planned role-configuration commands
+### Roster role-configuration commands
 
-`/captain-role-config`, `/organization-role-config`, and
-`/broadcast-role-config` follow the setup safety contract:
+`/captain-role-config` and `/organization-role-config` are live and follow the
+setup safety contract below. `/broadcast-role-config` remains planned.
 
 - validate the caller against `admin_users`;
 - read and write mappings through `packages/db`;
@@ -126,8 +126,8 @@ accepts no additional compensation and closes once the division room starts.
 - append immutable `audit_logs` with actor and old/new values; and
 - return setup output ephemerally.
 
-`/organization-role-config` also owns the canonical short tag used in mobile
-transaction messages, such as `FF`, `TC`, or `EV`.
+Mobile transaction messages read the existing canonical `orgs.tag` value, such
+as `FF`, `TC`, or `EV`; role configuration never invents a second tag.
 
 ---
 

@@ -1,11 +1,15 @@
 import { EmbedBuilder, type Client, type Message } from 'discord.js';
 import {
   getMatchById,
+  getCanonicalOrganizationRoleStates,
   getPendingAction,
+  getRosterTrade,
+  updateRosterTradeAdminReviewMessage,
+  updateRosterTradeProposalMessage,
   type OperationOutboxRow,
   type SupabaseClient,
 } from '@salbot/db';
-import { getAdminReviewChannelId, getResultsChannelId, getReschedulesChannelId } from './channels';
+import { getAdminReviewChannelId, getResultsChannelId, getReschedulesChannelId, getTransactionsChannelId } from './channels';
 import {
   applyApprovedStatus,
   applyCancelledStatus,
@@ -14,6 +18,15 @@ import {
 } from './embeds';
 import { removeActiveProofThread } from './proof-thread';
 import { requestStandingsRecalculation } from './standings-sync';
+import { buildApprovalButtons } from './embeds';
+import {
+  buildCompletedTradeLine,
+  buildTradeAdminEmbed,
+  buildTradeProposalButtons,
+  buildTradeProposalEmbed,
+  tradeOperationMarker,
+  tradeProposalMarker,
+} from './trade-rendering';
 
 type DecisionStatus = 'approved' | 'denied' | 'pending_info' | 'cancelled';
 
@@ -44,10 +57,223 @@ export function createOutboxProjector(client: Client, db: SupabaseClient) {
           optionalString(row.payload.outboxIdempotencyKey) ?? undefined,
         );
         return row.aggregate_id;
+      case 'discord_trade_proposal_projection':
+        return projectTradeProposal(client, db, row);
+      case 'discord_trade_admin_review':
+        return projectTradeAdminReview(client, db, row);
+      case 'discord_transaction_bulletin':
+        return projectTransactionBulletin(client, db, row);
+      case 'discord_organization_role_reconciliation':
+        return projectOrganizationRoleReconciliation(client, db, row);
       default:
         throw new Error(`Unsupported operation outbox topic: ${row.topic}`);
     }
   };
+}
+
+async function projectTradeProposal(
+  client: Client,
+  db: SupabaseClient,
+  row: OperationOutboxRow,
+): Promise<string> {
+  const trade = await getRosterTrade(db, row.aggregate_id);
+  if (!trade) throw new Error(`Roster trade ${row.aggregate_id} not found`);
+  const channelId = requiredString(row.payload.channelId, 'channelId');
+  const channel = await client.channels.fetch(channelId);
+  if (!channel?.isTextBased() || !('messages' in channel) || !('send' in channel)) {
+    throw new Error(`Trade proposal channel ${channelId} is not text based`);
+  }
+  let message = trade.proposalMessageId
+    ? await channel.messages.fetch(trade.proposalMessageId).catch(() => undefined)
+    : undefined;
+  if (!message) {
+    const recent = await channel.messages.fetch({ limit: 100 });
+    message = recent.find((candidate) => messageHasMarker(candidate, tradeProposalMarker(trade.id)));
+  }
+  const payload = {
+    embeds: [buildTradeProposalEmbed(trade)],
+    components: buildTradeProposalButtons(trade),
+  };
+  if (message) await message.edit(payload);
+  else message = await channel.send(payload);
+  if (!message) throw new Error(`Trade proposal ${trade.id} did not produce a Discord message`);
+  if (trade.proposalMessageId !== message.id) {
+    await updateRosterTradeProposalMessage(db, trade.id, message.id);
+  }
+  return message.id;
+}
+
+async function projectTradeAdminReview(
+  client: Client,
+  db: SupabaseClient,
+  row: OperationOutboxRow,
+): Promise<string> {
+  const trade = await getRosterTrade(db, row.aggregate_id);
+  if (!trade) throw new Error(`Roster trade ${row.aggregate_id} not found`);
+  const action = await getPendingAction(db, trade.pendingActionId);
+  if (!action) throw new Error(`Pending action ${trade.pendingActionId} not found`);
+  const channel = await client.channels.fetch(getAdminReviewChannelId());
+  if (!channel?.isTextBased() || !('messages' in channel) || !('send' in channel)) {
+    throw new Error('Admin review channel is not text based');
+  }
+  let message = action.admin_review_message_id
+    ? await channel.messages.fetch(action.admin_review_message_id).catch(() => undefined)
+    : undefined;
+  const marker = `sal-trade-review:${trade.pendingActionId}`;
+  if (!message) {
+    const recent = await channel.messages.fetch({ limit: 100 });
+    message = recent.find((candidate) => messageHasMarker(candidate, marker));
+  }
+  const payload = { embeds: [buildTradeAdminEmbed(trade)], components: [buildApprovalButtons(trade.pendingActionId)] };
+  if (message) await message.edit(payload);
+  else message = await channel.send(payload);
+  if (!message) throw new Error(`Trade review ${trade.pendingActionId} did not produce a Discord message`);
+  if (action.admin_review_message_id !== message.id) {
+    await updateRosterTradeAdminReviewMessage(db, trade.pendingActionId, message.id);
+  }
+  return message.id;
+}
+
+async function projectTransactionBulletin(
+  client: Client,
+  db: SupabaseClient,
+  row: OperationOutboxRow,
+): Promise<string> {
+  const trade = await getRosterTrade(db, row.aggregate_id);
+  if (!trade || trade.status !== 'completed') {
+    throw new Error(`Completed roster trade ${row.aggregate_id} not found`);
+  }
+  const channel = await client.channels.fetch(getTransactionsChannelId());
+  if (!channel?.isTextBased() || !('messages' in channel) || !('send' in channel)) {
+    throw new Error('Transactions channel is not text based');
+  }
+  const marker = tradeOperationMarker(trade.id);
+  const recent = await channel.messages.fetch({ limit: 100 });
+  const existing = recent.find((candidate) => messageHasMarker(candidate, marker));
+  if (existing) return existing.id;
+  const line = buildCompletedTradeLine({
+    divisionId: trade.divisionId,
+    proposerOrgId: trade.proposerOrgId,
+    receiverOrgId: trade.receiverOrgId,
+    proposerTag: trade.proposer.tag,
+    receiverTag: trade.receiver.tag,
+    movements: trade.movements.map((movement) => ({
+      playerName: movement.name,
+      fromOrgId: movement.fromOrgId,
+      toOrgId: movement.toOrgId,
+    })),
+  });
+  try {
+    const message = await channel.send({
+      embeds: [new EmbedBuilder().setDescription(line).setFooter({ text: marker }).setTimestamp()],
+    });
+    return message.id;
+  } catch (error) {
+    let alertFailure = '';
+    try {
+      await postPrivateAlert(client, {
+        marker: `sal-delivery-alert:${row.id}`,
+        title: 'Transaction bulletin delivery needs reconciliation',
+        description: `Transaction: ${trade.id}\nTarget: CHANNEL_TRANSACTIONS\nStable marker: ${marker}\nLatest error: ${errorText(error)}\nRetry status: paused for durable reconciliation`,
+      });
+    } catch (alertError) {
+      // The uncertain public send must still leave the automatic retry loop
+      // even when the secondary admin alert cannot be delivered.
+      alertFailure = ` Admin alert also failed: ${errorText(alertError)}`;
+    }
+    throw new AmbiguousDiscordDeliveryError(
+      `Ambiguous transaction bulletin delivery for ${trade.id}: ${errorText(error)}.${alertFailure}`,
+    );
+  }
+}
+
+async function projectOrganizationRoleReconciliation(
+  client: Client,
+  db: SupabaseClient,
+  row: OperationOutboxRow,
+): Promise<string> {
+  const seasonId = requiredString(row.payload.seasonId, 'seasonId');
+  const playerIds = requiredStringArray(row.payload.playerIds, 'playerIds');
+  const guildId = requiredEnvironment('DISCORD_GUILD_ID');
+  const guild = await client.guilds.fetch(guildId);
+  const states = await getCanonicalOrganizationRoleStates(db, seasonId, playerIds);
+  const failures: string[] = [];
+  for (const state of states) {
+    try {
+      if (!state.discordId) throw new Error('Player has no linked Discord member ID.');
+      if (!state.desiredOrganizationRoleId) throw new Error('Canonical organization role mapping is missing.');
+      const member = await guild.members.fetch(state.discordId);
+      const removals = state.knownOrganizationRoleIds.filter((roleId) =>
+        roleId !== state.desiredOrganizationRoleId && member.roles.cache.has(roleId));
+      if (removals.length > 0) {
+        await member.roles.remove(removals, `Canonical roster reconciliation for ${row.aggregate_id}`);
+      }
+      if (!member.roles.cache.has(state.desiredOrganizationRoleId)) {
+        await member.roles.add(state.desiredOrganizationRoleId, `Canonical roster reconciliation for ${row.aggregate_id}`);
+      }
+    } catch (error) {
+      const failedOperation = errorText(error);
+      failures.push(`${state.playerId}: ${failedOperation}`);
+      await postPrivateAlert(client, {
+        marker: `sal-role-alert:${row.id}:${state.playerId}`,
+        title: 'Organization role reconciliation failed',
+        description: [
+          `Transaction: ${row.aggregate_id}`,
+          `Player/member: ${state.playerName} / ${state.discordId ?? 'unlinked'}`,
+          `Intended organization/role: ${state.orgId ?? 'none'} / ${state.desiredOrganizationRoleId ?? 'unconfigured'}`,
+          `Failed operation: canonical role reconciliation`,
+          `Latest error: ${failedOperation}`,
+          `Retry status: ${row.attempts >= 10 ? 'manual intervention required (retry limit reached)' : 'automatic retry pending'}`,
+        ].join('\n'),
+      });
+    }
+  }
+  if (states.length !== playerIds.length) failures.push('One or more canonical roster rows were missing.');
+  if (failures.length > 0) throw new Error(`Organization role reconciliation incomplete: ${failures.join('; ')}`);
+  return row.aggregate_id;
+}
+
+async function postPrivateAlert(
+  client: Client,
+  input: { marker: string; title: string; description: string },
+): Promise<string> {
+  const channel = await client.channels.fetch(getAdminReviewChannelId());
+  if (!channel?.isTextBased() || !('messages' in channel) || !('send' in channel)) throw new Error('Admin review channel is not text based');
+  const recent = await channel.messages.fetch({ limit: 100 });
+  const existing = recent.find((message) => messageHasMarker(message, input.marker));
+  const payload = { embeds: [new EmbedBuilder().setTitle(input.title).setDescription(input.description)
+    .setFooter({ text: input.marker }).setTimestamp()] };
+  if (existing) {
+    await existing.edit(payload);
+    return existing.id;
+  }
+  return (await channel.send(payload)).id;
+}
+
+function messageHasMarker(message: Message, marker: string): boolean {
+  return message.content.includes(marker)
+    || message.embeds.some((embed) => embed.footer?.text?.includes(marker));
+}
+
+function requiredStringArray(value: unknown, label: string): string[] {
+  if (!Array.isArray(value) || value.length === 0 || value.some((item) => typeof item !== 'string')) {
+    throw new Error(`Outbox payload ${label} must be a non-empty string array`);
+  }
+  return value as string[];
+}
+
+function requiredEnvironment(name: string): string {
+  const value = process.env[name];
+  if (!value) throw new Error(`${name} is not configured`);
+  return value;
+}
+
+function errorText(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+export class AmbiguousDiscordDeliveryError extends Error {
+  readonly needsReconciliation = true;
 }
 
 async function projectReview(

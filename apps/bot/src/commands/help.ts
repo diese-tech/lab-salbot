@@ -19,6 +19,9 @@ const COMMAND_LIST = [
   ['/division-sync', 'Admins', "Bulk-sync players' Discord identity and division roles from a CSV."],
   ['/log-scouter', 'SAL Operators / Admins', 'Upload SMITE 2 screenshots and record a public scouter receipt.'],
   ['/profile', 'Everyone', "View your or another linked player's scouter stats."],
+  ['/trade', 'Division Captains', 'Propose, counter, accept, decline, withdraw, or revoke a roster trade for admin review.'],
+  ['/captain-role-config', 'Admins', 'Configure division-specific Captain roles.'],
+  ['/organization-role-config', 'Admins', 'Configure canonical organization roles.'],
   ['/help', 'Everyone', 'Show this list.'],
 ] as const;
 

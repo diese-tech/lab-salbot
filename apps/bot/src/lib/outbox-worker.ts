@@ -12,6 +12,11 @@ export type OutboxWorkerDependencies = {
     error: string,
     retryAfterSeconds: number,
   ) => Promise<{ state: string }>;
+  reconcileAmbiguity: (
+    outboxId: string,
+    workerId: string,
+    error: string,
+  ) => Promise<{ state: string }>;
   log: (level: LogLevel, event: string, details?: Record<string, unknown>) => void;
 };
 
@@ -164,6 +169,20 @@ export class OperationOutboxWorker {
     } catch (error) {
       if (this.releasedRows.has(row.id)) return;
       const message = errorMessage(error);
+      if (needsReconciliation(error)) {
+        try {
+          await this.dependencies.reconcileAmbiguity(row.id, this.options.workerId, message);
+          this.dependencies.log('error', 'outbox_needs_reconciliation', {
+            outboxId: row.id, topic: row.topic, attempts: row.attempts, ageMs, error: message,
+          });
+        } catch (reconciliationError) {
+          this.dependencies.log('error', 'outbox_reconciliation_record_failed', {
+            outboxId: row.id, topic: row.topic, error: errorMessage(reconciliationError),
+            projectionError: message,
+          });
+        }
+        return;
+      }
       const retryAfterSeconds = getRetryDelaySeconds(row.attempts, this.random);
       try {
         const result = await this.dependencies.fail(
@@ -224,6 +243,12 @@ export class OperationOutboxWorker {
       }
     }));
   }
+}
+
+function needsReconciliation(error: unknown): boolean {
+  return typeof error === 'object' && error !== null
+    && 'needsReconciliation' in error
+    && (error as { needsReconciliation?: unknown }).needsReconciliation === true;
 }
 
 function errorMessage(error: unknown): string {
