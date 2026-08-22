@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { hasCommandAccess, validateCommandAccessEnv } from './command-access';
+import { hasAdminCommandAccess, hasCommandAccess, validateCommandAccessEnv } from './command-access';
 
 const OPERATOR_ROLES = [
   '111111111111111111',
@@ -20,12 +20,14 @@ describe('Discord role-backed operational command access', () => {
     process.env = { ...originalEnv };
   });
 
-  it.each(OPERATOR_ROLES)('authorizes configured operator role %s for both initial capabilities', (roleId) => {
+  it.each(OPERATOR_ROLES)('authorizes configured operator role %s for operational capabilities', (roleId) => {
     process.env.SAL_OPERATOR_ROLE_IDS = OPERATOR_ROLES.join(',');
     process.env.SAL_ADMIN_ROLE_IDS = ADMIN_ROLE;
 
     expect(hasCommandAccess(member(roleId), 'report-result')).toBe(true);
     expect(hasCommandAccess(member(roleId), 'log-scouter')).toBe(true);
+    expect(hasCommandAccess(member(roleId), 'trade')).toBe(true);
+    expect(hasAdminCommandAccess(member(roleId))).toBe(false);
   });
 
   it('authorizes the configured admin role as an override', () => {
@@ -34,6 +36,8 @@ describe('Discord role-backed operational command access', () => {
 
     expect(hasCommandAccess(member(ADMIN_ROLE), 'report-result')).toBe(true);
     expect(hasCommandAccess(member(ADMIN_ROLE), 'log-scouter')).toBe(true);
+    expect(hasCommandAccess(member(ADMIN_ROLE), 'trade')).toBe(true);
+    expect(hasAdminCommandAccess(member(ADMIN_ROLE))).toBe(true);
   });
 
   it('supports cached GuildMember roles from normal gateway interactions', () => {

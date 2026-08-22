@@ -55,7 +55,9 @@ division-specific Captain role, and organization role. A global
 `players.is_captain` flag by itself is not sufficient for roster commands. An
 organization may have a team in every division; authorization is resolved for
 the command channel's division rather than assigning the organization to only
-one division.
+one division. Player/OAuth linkage is business and display data, not an
+additional command-access gate. Configured SAL administrators may select any
+active organization only for the accepted remediation workflow.
 
 ### `/trade`
 

@@ -15,25 +15,33 @@ vi.mock('@salbot/db', () => ({
 import { acceptRosterTrade, createRosterTrade, getRosterTrade, getRosterTradeSetup } from '@salbot/db';
 import { execute, handleTradeActionButton, handleTradeSelect, handleTradeWizardButton } from './trade';
 
+const OPERATOR_ROLE_ID = '11111111111111111';
+const ADMIN_ROLE_ID = '22222222222222222';
+const CAPTAIN_ROLE_ID = '33333333333333333';
+const ORG_A_ROLE_ID = '44444444444444444';
+const ORG_B_ROLE_ID = '55555555555555555';
+
 describe('/trade entry authorization', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.CHANNEL_TRADE_BLOCK_SOLAR = 'channel-solar';
+    process.env.SAL_OPERATOR_ROLE_IDS = OPERATOR_ROLE_ID;
+    process.env.SAL_ADMIN_ROLE_IDS = ADMIN_ROLE_ID;
   });
 
-  it('starts an ephemeral wizard for a current division captain in the configured channel', async () => {
+  it('starts an ephemeral wizard for a role-authorized temporary captain without player linkage', async () => {
     vi.mocked(getRosterTradeSetup).mockResolvedValue({
       seasonId: 'season-1',
       divisionId: 'solar',
       tradesOpen: true,
-      captainRoleId: 'captain-role',
+      captainRoleId: CAPTAIN_ROLE_ID,
       organizations: [
         {
-          id: 'org-a', name: 'Alpha', tag: 'ALP', organizationRoleId: 'org-role-a',
-          captainDiscordIds: ['captain-1'], players: [{ id: 'a1', name: 'Alpha One', discordId: 'a1-discord' }],
+          id: 'org-a', name: 'Alpha', tag: 'ALP', organizationRoleId: ORG_A_ROLE_ID,
+          captainDiscordIds: [], players: [{ id: 'a1', name: 'Alpha One', discordId: null }],
         },
         {
-          id: 'org-b', name: 'Beta', tag: 'BET', organizationRoleId: 'org-role-b',
+          id: 'org-b', name: 'Beta', tag: 'BET', organizationRoleId: ORG_B_ROLE_ID,
           captainDiscordIds: ['captain-2'], players: [{ id: 'b1', name: 'Beta One', discordId: 'b1-discord' }],
         },
       ],
@@ -42,8 +50,8 @@ describe('/trade entry authorization', () => {
     const interaction = {
       channelId: 'channel-solar',
       guildId: 'guild-1',
-      user: { id: 'captain-1' },
-      member: { roles: ['captain-role', 'org-role-a'] },
+      user: { id: 'temporary-captain' },
+      member: { roles: [OPERATOR_ROLE_ID, CAPTAIN_ROLE_ID, ORG_A_ROLE_ID] },
       reply,
     };
 
@@ -52,6 +60,22 @@ describe('/trade entry authorization', () => {
     expect(reply).toHaveBeenCalledWith(expect.objectContaining({ ephemeral: true }));
     expect(reply.mock.calls[0][0].content).toContain('Step 1 of 5');
     expect(reply.mock.calls[0][0].components).toHaveLength(1);
+  });
+
+  it('lets an authorized administrator select any active organization for remediation', async () => {
+    vi.mocked(getRosterTradeSetup).mockResolvedValue(setupFixture());
+    const reply = vi.fn();
+
+    await execute({
+      channelId: 'channel-solar', guildId: 'guild-1', user: { id: 'admin-1' },
+      member: { roles: [ADMIN_ROLE_ID] }, reply,
+    } as never);
+
+    expect(reply.mock.calls[0][0].content).toContain('Step 1 of 5');
+    const row = reply.mock.calls[0][0].components[0].toJSON() as {
+      components: Array<{ options: unknown[] }>;
+    };
+    expect(row.components[0].options).toHaveLength(2);
   });
 
   it('rejects the command privately in the wrong channel before querying canonical state', async () => {
@@ -64,18 +88,18 @@ describe('/trade entry authorization', () => {
     expect(reply).toHaveBeenCalledWith(expect.objectContaining({ ephemeral: true }));
   });
 
-  it('rejects a user missing the canonical captain and organization role combination', async () => {
+  it('rejects a role-authorized captain missing the canonical organization role', async () => {
     vi.mocked(getRosterTradeSetup).mockResolvedValue({
-      seasonId: 'season-1', divisionId: 'solar', tradesOpen: true, captainRoleId: 'captain-role',
+      seasonId: 'season-1', divisionId: 'solar', tradesOpen: true, captainRoleId: CAPTAIN_ROLE_ID,
       organizations: [{
-        id: 'org-a', name: 'Alpha', tag: 'ALP', organizationRoleId: 'org-role-a',
-        captainDiscordIds: ['captain-1'], players: [{ id: 'a1', name: 'Alpha One', discordId: null }],
+        id: 'org-a', name: 'Alpha', tag: 'ALP', organizationRoleId: ORG_A_ROLE_ID,
+        captainDiscordIds: [], players: [{ id: 'a1', name: 'Alpha One', discordId: null }],
       }],
     });
     const reply = vi.fn();
     await execute({
       channelId: 'channel-solar', guildId: 'guild-1', user: { id: 'captain-1' },
-      member: { roles: ['captain-role'] }, reply,
+      member: { roles: [OPERATOR_ROLE_ID, CAPTAIN_ROLE_ID] }, reply,
     } as never);
 
     expect(reply).toHaveBeenCalledWith(expect.objectContaining({
@@ -85,10 +109,10 @@ describe('/trade entry authorization', () => {
 
   it('keeps selections private until Post Proposal and supports an uneven exchange', async () => {
     vi.mocked(getRosterTradeSetup).mockResolvedValue({
-      seasonId: 'season-1', divisionId: 'solar', tradesOpen: true, captainRoleId: 'captain-role',
+      seasonId: 'season-1', divisionId: 'solar', tradesOpen: true, captainRoleId: CAPTAIN_ROLE_ID,
       organizations: [
         {
-          id: 'org-a', name: 'Alpha', tag: 'ALP', organizationRoleId: 'org-role-a',
+          id: 'org-a', name: 'Alpha', tag: 'ALP', organizationRoleId: ORG_A_ROLE_ID,
           captainDiscordIds: ['captain-1'],
           players: [
             { id: 'a1', name: 'Alpha One', discordId: null },
@@ -96,7 +120,7 @@ describe('/trade entry authorization', () => {
           ],
         },
         {
-          id: 'org-b', name: 'Beta', tag: 'BET', organizationRoleId: 'org-role-b',
+          id: 'org-b', name: 'Beta', tag: 'BET', organizationRoleId: ORG_B_ROLE_ID,
           captainDiscordIds: ['captain-2'], players: [{ id: 'b1', name: 'Beta One', discordId: null }],
         },
       ],
@@ -108,7 +132,7 @@ describe('/trade entry authorization', () => {
     const reply = vi.fn();
     await execute({
       channelId: 'channel-solar', guildId: 'guild-1', user: { id: 'captain-1' },
-      member: { roles: ['captain-role', 'org-role-a'] }, reply,
+      member: { roles: [OPERATOR_ROLE_ID, CAPTAIN_ROLE_ID, ORG_A_ROLE_ID] }, reply,
     } as never);
     let customId = componentCustomId(reply.mock.calls[0][0]);
 
@@ -126,7 +150,7 @@ describe('/trade entry authorization', () => {
     const editReply = vi.fn();
     await handleTradeWizardButton({
       customId: postCustomId, channelId: 'channel-solar', user: { id: 'captain-1' },
-      member: { roles: ['captain-role', 'org-role-a'] },
+      member: { roles: [OPERATOR_ROLE_ID, CAPTAIN_ROLE_ID, ORG_A_ROLE_ID] },
       deferUpdate: vi.fn(), editReply,
     } as never);
 
@@ -158,12 +182,13 @@ describe('/trade entry authorization', () => {
     const editReply = vi.fn();
     await handleTradeActionButton({
       customId: 'trade:accept:trade-1:1', channelId: 'channel-solar',
-      user: { id: 'captain-2' }, member: { roles: ['captain-role', 'org-role-b'] },
+      user: { id: 'temporary-captain-2' },
+      member: { roles: [OPERATOR_ROLE_ID, CAPTAIN_ROLE_ID, ORG_B_ROLE_ID] },
       deferReply: vi.fn(), editReply,
     } as never);
 
     expect(acceptRosterTrade).toHaveBeenCalledWith({}, {
-      transactionId: 'trade-1', expectedRevision: 1, actorDiscordId: 'captain-2',
+      transactionId: 'trade-1', expectedRevision: 1, actorDiscordId: 'temporary-captain-2',
     });
     expect(editReply).toHaveBeenCalledWith(expect.stringContaining('no roster changed yet'));
   });
@@ -172,7 +197,8 @@ describe('/trade entry authorization', () => {
     vi.mocked(getRosterTrade).mockResolvedValue({ ...tradeFixture(), currentRevision: 2 });
     await expect(handleTradeActionButton({
       customId: 'trade:accept:trade-1:1', channelId: 'channel-solar',
-      user: { id: 'captain-2' }, member: { roles: ['captain-role', 'org-role-b'] },
+      user: { id: 'captain-2' },
+      member: { roles: [OPERATOR_ROLE_ID, CAPTAIN_ROLE_ID, ORG_B_ROLE_ID] },
     } as never)).rejects.toThrow('card is stale');
     expect(acceptRosterTrade).not.toHaveBeenCalled();
   });
@@ -196,12 +222,12 @@ async function select(customId: string, values: string[]) {
 
 function setupFixture() {
   return {
-    seasonId: 'season-1', divisionId: 'solar', tradesOpen: true, captainRoleId: 'captain-role',
+    seasonId: 'season-1', divisionId: 'solar', tradesOpen: true, captainRoleId: CAPTAIN_ROLE_ID,
     organizations: [
-      { id: 'org-a', name: 'Alpha', tag: 'ALP', organizationRoleId: 'org-role-a',
-        captainDiscordIds: ['captain-1'], players: [{ id: 'a1', name: 'Alpha One', discordId: null }] },
-      { id: 'org-b', name: 'Beta', tag: 'BET', organizationRoleId: 'org-role-b',
-        captainDiscordIds: ['captain-2'], players: [{ id: 'b1', name: 'Beta One', discordId: null }] },
+      { id: 'org-a', name: 'Alpha', tag: 'ALP', organizationRoleId: ORG_A_ROLE_ID,
+        captainDiscordIds: [], players: [{ id: 'a1', name: 'Alpha One', discordId: null }] },
+      { id: 'org-b', name: 'Beta', tag: 'BET', organizationRoleId: ORG_B_ROLE_ID,
+        captainDiscordIds: [], players: [{ id: 'b1', name: 'Beta One', discordId: null }] },
     ],
   };
 }

@@ -60,8 +60,8 @@ for the supersession and capability contract.
 The remaining planned roster commands must use the same contract:
 
 ```
-Discord user ID
-  → active-season player identity
+Discord guild member roles
+  → SAL operational capability or administrator remediation override
   → division-specific Captain role
   → organization role
   → organization team in the command channel's division
@@ -69,7 +69,8 @@ Discord user ID
 
 Both roles are required. This survives captain changes without issuing
 captain-specific links and allows one organization to field separate teams in
-Solar, Lunar, and Terra.
+Solar, Lunar, and Terra. Player/OAuth/roster linkage may provide business
+context but does not independently grant or deny Discord command access.
 
 ---
 

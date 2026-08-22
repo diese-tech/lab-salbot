@@ -20,6 +20,7 @@ import {
 } from '@salbot/db';
 import { db } from '../lib/db';
 import { getTradeDivisionForChannel } from '../lib/channels';
+import { hasAdminCommandAccess, hasCommandAccess } from '../lib/command-access';
 import { UserFacingError } from '../lib/errors';
 import { requestImmediateOutboxDrain } from '../lib/outbox-runtime';
 
@@ -75,7 +76,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
   const captainRoleId = setup.captainRoleId;
   const authorizedOrganizations = setup.organizations.filter((org) =>
-    authorizedForOrganization(interaction.member, interaction.user.id, captainRoleId, org),
+    authorizedForOrganization(interaction.member, captainRoleId, org),
   );
   if (authorizedOrganizations.length === 0) {
     await interaction.reply({
@@ -218,7 +219,7 @@ async function requireCurrentWizardAuthorization(
   const proposer = setup.organizations.find((org) => org.id === wizard.proposerOrgId);
   const receiver = setup.organizations.find((org) => org.id === wizard.receiverOrgId);
   if (!proposer || !receiver
-    || !authorizedForOrganization(interaction.member, interaction.user.id, setup.captainRoleId, proposer)) {
+    || !authorizedForOrganization(interaction.member, setup.captainRoleId, proposer)) {
     throw new UserFacingError('Your current Captain or organization-role authorization no longer permits this proposal.');
   }
   assertSelectedPlayers(proposer, wizard.offeredPlayerIds ?? []);
@@ -250,7 +251,7 @@ export async function handleTradeActionButton(interaction: ButtonInteraction): P
   }
   const captainRoleId = setup.captainRoleId;
   const actorOrgIds = setup.organizations
-    .filter((org) => authorizedForOrganization(interaction.member, interaction.user.id, captainRoleId, org))
+    .filter((org) => authorizedForOrganization(interaction.member, captainRoleId, org))
     .map((org) => org.id);
 
   if (action === 'counter') {
@@ -390,11 +391,11 @@ function tradeReviewText(
 
 function authorizedForOrganization(
   member: APIInteractionGuildMember | GuildMember | null,
-  actorDiscordId: string,
   captainRoleId: string,
   org: RosterTradeOrganization,
 ): boolean {
-  return org.captainDiscordIds.includes(actorDiscordId)
+  if (hasAdminCommandAccess(member)) return true;
+  return hasCommandAccess(member, 'trade')
     && !!org.organizationRoleId
     && memberHasRole(member, captainRoleId)
     && memberHasRole(member, org.organizationRoleId);
