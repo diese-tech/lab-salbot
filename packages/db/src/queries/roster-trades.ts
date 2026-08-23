@@ -1,11 +1,5 @@
 import type { SupabaseClient } from '../client';
 
-// This module is the temporary consumer binding for the unreleased roster-trade
-// contract. Keep every ungenerated table/RPC access here so the cast disappears
-// when the next immutable sal-database types are pinned.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type ContractClient = any;
-
 export type RosterTradePlayer = {
   id: string;
   name: string;
@@ -60,10 +54,6 @@ export type RosterTradeMutationResult = {
   outboxIds?: string[];
 };
 
-function contract(db: SupabaseClient): ContractClient {
-  return db as ContractClient;
-}
-
 function record(value: unknown, label: string): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new Error(`${label} returned an invalid result.`);
@@ -98,7 +88,7 @@ export async function getRosterTradeSetup(
   db: SupabaseClient,
   divisionId: string,
 ): Promise<RosterTradeSetup | null> {
-  const client = contract(db);
+  const client = db;
   const { data: season, error: seasonError } = await client
     .from('seasons')
     .select('id')
@@ -182,7 +172,7 @@ export async function createRosterTrade(
     source?: string;
   },
 ): Promise<RosterTradeMutationResult> {
-  const { data, error } = await contract(db).rpc('create_roster_trade', {
+  const { data, error } = await db.rpc('create_roster_trade', {
     p_actor_discord_id: params.actorDiscordId,
     p_season_id: params.seasonId,
     p_division_id: params.divisionId,
@@ -202,7 +192,7 @@ export async function counterRosterTrade(
   params: { transactionId: string; expectedRevision: number; actorDiscordId: string;
     offeredPlayerIds: string[]; requestedPlayerIds: string[] },
 ): Promise<RosterTradeMutationResult> {
-  const { data, error } = await contract(db).rpc('counter_roster_trade', {
+  const { data, error } = await db.rpc('counter_roster_trade', {
     p_transaction_id: params.transactionId,
     p_expected_revision: params.expectedRevision,
     p_actor_discord_id: params.actorDiscordId,
@@ -217,7 +207,7 @@ export async function acceptRosterTrade(
   db: SupabaseClient,
   params: { transactionId: string; expectedRevision: number; actorDiscordId: string },
 ): Promise<RosterTradeMutationResult> {
-  const { data, error } = await contract(db).rpc('accept_roster_trade', {
+  const { data, error } = await db.rpc('accept_roster_trade', {
     p_transaction_id: params.transactionId,
     p_expected_revision: params.expectedRevision,
     p_actor_discord_id: params.actorDiscordId,
@@ -230,7 +220,7 @@ export async function declineRosterTrade(
   db: SupabaseClient,
   params: { transactionId: string; expectedRevision: number; actorDiscordId: string },
 ): Promise<RosterTradeMutationResult> {
-  const { data, error } = await contract(db).rpc('decline_roster_trade', {
+  const { data, error } = await db.rpc('decline_roster_trade', {
     p_transaction_id: params.transactionId,
     p_expected_revision: params.expectedRevision,
     p_actor_discord_id: params.actorDiscordId,
@@ -244,7 +234,7 @@ export async function cancelRosterTrade(
   params: { transactionId: string; expectedRevision: number; actorDiscordId: string;
     mode: 'withdraw' | 'revoke' },
 ): Promise<RosterTradeMutationResult> {
-  const { data, error } = await contract(db).rpc('cancel_roster_trade', {
+  const { data, error } = await db.rpc('cancel_roster_trade', {
     p_transaction_id: params.transactionId,
     p_expected_revision: params.expectedRevision,
     p_actor_discord_id: params.actorDiscordId,
@@ -255,7 +245,7 @@ export async function cancelRosterTrade(
 }
 
 export async function getRosterTrade(db: SupabaseClient, transactionId: string): Promise<RosterTrade | null> {
-  const client = contract(db);
+  const client = db;
   const { data: trade, error } = await client.from('roster_transactions').select('*')
     .eq('id', transactionId).maybeSingle();
   if (error) throw error;
@@ -298,7 +288,7 @@ export async function getRosterTrade(db: SupabaseClient, transactionId: string):
 export async function updateRosterTradeProposalMessage(
   db: SupabaseClient, transactionId: string, messageId: string,
 ): Promise<void> {
-  const { error } = await contract(db).from('roster_transactions')
+  const { error } = await db.from('roster_transactions')
     .update({ proposal_message_id: messageId, updated_at: new Date().toISOString() })
     .eq('id', transactionId);
   if (error) throw error;
@@ -307,7 +297,7 @@ export async function updateRosterTradeProposalMessage(
 export async function updateRosterTradeAdminReviewMessage(
   db: SupabaseClient, pendingActionId: string, messageId: string,
 ): Promise<void> {
-  const { error } = await contract(db).from('pending_actions')
+  const { error } = await db.from('pending_actions')
     .update({ admin_review_message_id: messageId, updated_at: new Date().toISOString() })
     .eq('id', pendingActionId);
   if (error) throw error;
@@ -325,7 +315,7 @@ export type CanonicalOrganizationRoleState = {
 export async function getCanonicalOrganizationRoleStates(
   db: SupabaseClient, seasonId: string, playerIds: string[],
 ): Promise<CanonicalOrganizationRoleState[]> {
-  const client = contract(db);
+  const client = db;
   const [{ data: mappings, error: mappingError }, { data: rosters, error: rosterError }] = await Promise.all([
     client.from('organization_role_mappings').select('org_id,discord_role_id'),
     client.from('season_rosters')
