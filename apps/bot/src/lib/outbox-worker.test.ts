@@ -27,6 +27,7 @@ function dependencies(overrides: Record<string, unknown> = {}) {
     project: vi.fn().mockResolvedValue('discord-message-1'),
     complete: vi.fn().mockResolvedValue(undefined),
     fail: vi.fn().mockResolvedValue({ state: 'pending' }),
+    reconcileAmbiguity: vi.fn().mockResolvedValue({ state: 'needs_reconciliation' }),
     log: vi.fn(),
     ...overrides,
   };
@@ -69,6 +70,20 @@ describe('OperationOutboxWorker', () => {
       'Discord unavailable',
       20,
     );
+  });
+
+  it('pauses ambiguous Discord delivery for reconciliation instead of blindly retrying', async () => {
+    const error = Object.assign(new Error('Discord timed out after send'), { needsReconciliation: true });
+    const deps = dependencies({ project: vi.fn().mockRejectedValue(error) });
+    const worker = new OperationOutboxWorker(deps, { workerId: 'worker-1' });
+
+    await worker.drainNow();
+
+    expect(deps.reconcileAmbiguity).toHaveBeenCalledWith(
+      'outbox-1', 'worker-1', 'Discord timed out after send',
+    );
+    expect(deps.fail).not.toHaveBeenCalled();
+    expect(deps.complete).not.toHaveBeenCalled();
   });
 
   it('coalesces concurrent drain requests', async () => {

@@ -23,7 +23,7 @@ export function requiredEnvNames() {
   return [...REQUIRED_ENV];
 }
 
-// The 7 channel env vars are checked lazily at first use (see lib/channels.ts),
+// Channel env vars are checked lazily at first use (see lib/channels.ts),
 // so a partially configured bot can still serve the divisions that ARE
 // configured. This just surfaces the misconfiguration at boot — as a warning,
 // not a crash — instead of leaving it to be discovered mid-workflow.

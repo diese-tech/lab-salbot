@@ -22,6 +22,8 @@ export async function handleApproveButton(interaction: ButtonInteraction, pendin
       await interaction.editReply(`This action is already ${result.finalStatus}.`);
     } else if (result.code === 'stale_cancelled') {
       await interaction.editReply(`Action cancelled without changes: ${result.note}`);
+    } else if (result.code === 'blocked') {
+      await interaction.editReply(`Execution blocked without roster changes: ${result.note ?? 'Revalidation failed.'}`);
     } else {
       await interaction.editReply('Approved. Discord receipts are updating.');
     }

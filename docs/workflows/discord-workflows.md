@@ -56,12 +56,12 @@ See
 [`ADR-009`](../adr/ADR-009-discord-role-backed-operational-command-authorization.md)
 for the supersession and capability contract.
 
-Planned roster commands use the stricter season-scoped authorization defined in
-ADR-009:
+`/trade` uses the stricter season-scoped authorization defined in ADR-009.
+The remaining planned roster commands must use the same contract:
 
 ```
-Discord user ID
-  → active-season player identity
+Discord guild member roles
+  → SAL operational capability or administrator remediation override
   → division-specific Captain role
   → organization role
   → organization team in the command channel's division
@@ -69,7 +69,8 @@ Discord user ID
 
 Both roles are required. This survives captain changes without issuing
 captain-specific links and allows one organization to field separate teams in
-Solar, Lunar, and Terra.
+Solar, Lunar, and Terra. Player/OAuth/roster linkage may provide business
+context but does not independently grant or deny Discord command access.
 
 ---
 
@@ -158,19 +159,19 @@ or database action.
 
 ---
 
-## Planned roster transaction lifecycle
+## Roster transaction lifecycle
 
 1. Captain command input and review remain ephemeral.
 2. Explicit submission creates durable transaction state and a linked
    `pending_actions` record.
 3. Trade proposals post a public division-channel card for counterpart consent.
-4. Accepted trades, claims, drops, and draft-position swaps enter the existing
-   private admin-review pipeline.
+4. Accepted trades enter the existing private admin-review pipeline. Planned
+   claims, drops, and draft-position swaps will reuse it.
 5. Approval executes one authoritative database transaction, including the
    immutable audit entry and durable outbox event.
 6. The bot publishes the completed operation to `CHANNEL_TRANSACTIONS`.
-7. Claims, drops, trades, and reversals reconcile Discord organization roles
-   from the resulting canonical roster.
+7. Trades reconcile Discord organization roles from the resulting canonical
+   roster. Planned claims, drops, and reversals will reuse the same worker.
 8. Failed role reconciliation alerts `CHANNEL_ADMIN_REVIEW`; it never rolls
    back the database operation or exposes private reasons publicly.
 

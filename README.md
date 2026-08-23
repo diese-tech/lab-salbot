@@ -99,20 +99,22 @@ Admin-only setup command. Admins map each SAL division to a Discord role from in
 
 Admin-only identity and role synchronization workflow. Admins upload a roster CSV, preview proposed Discord identity links and role changes, then apply the sync with a short-lived confirmation token.
 
-### Accepted roster transaction command scope
+### Roster transaction command scope
 
-ADR-009 defines the next SALBot command surface:
+ADR-009 defines the roster command surface. The `/trade`,
+`/captain-role-config`, and `/organization-role-config` slices are implemented:
 
-- `/trade`, `/claim`, `/drop`, and `/draft-position-swap` for guided,
-  season-scoped captain submissions in division trade-block channels;
-- `/captain-role-config`, `/organization-role-config`, and
-  `/broadcast-role-config` for audited admin mapping; and
-- durable completed-transaction, draft-conclusion, and Discord
-  organization-role reconciliation workers.
+- `/trade` uses guided, season-scoped captain submission in division
+  trade-block channels;
+- `/captain-role-config` and `/organization-role-config` provide audited admin
+  mapping; and
+- completed trades use durable transaction bulletin and Discord organization
+  role-reconciliation workers.
 
-These commands are accepted design, not currently registered production
-commands. See [`docs/commands.md`](docs/commands.md) for the complete permission
-and channel-scope contract.
+`/claim`, `/drop`, `/draft-position-swap`, `/broadcast-role-config`, draft
+conclusion delivery, web transaction forms, and historical reconciliation UI
+remain accepted future work. See [`docs/commands.md`](docs/commands.md) for the
+complete permission and channel-scope contract.
 
 ---
 
@@ -146,7 +148,7 @@ Proof threads attached to match reports:
 - Are stored as evidence references in Supabase Storage
 - Provide the proposed input surface for a future ForgeLens implementation
 
-Planned roster workflows use different destinations: trade proposals post in
+Roster workflows use different destinations: trade proposals post in
 the matching division trade-block channel, roster submissions enter private
 admin review, and only completed operations publish to the consolidated
 transactions channel. See [`docs/commands.md`](docs/commands.md) and

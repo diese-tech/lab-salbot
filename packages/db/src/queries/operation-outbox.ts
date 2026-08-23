@@ -184,6 +184,22 @@ export async function failOperationOutbox(
   return { state: requiredString(result.state, "fail_operation_outbox") };
 }
 
+export async function markOperationOutboxNeedsReconciliation(
+  db: SupabaseClient,
+  outboxId: string,
+  workerId: string,
+  errorMessage: string,
+): Promise<{ state: string }> {
+  const { data, error } = await db.rpc('mark_operation_outbox_needs_reconciliation' as never, {
+    p_outbox_id: outboxId,
+    p_worker_id: workerId,
+    p_error: errorMessage,
+  } as never);
+  if (error) throw error;
+  const result = objectResult(data, 'mark_operation_outbox_needs_reconciliation');
+  return { state: requiredString(result.state, 'mark_operation_outbox_needs_reconciliation') };
+}
+
 export async function getOperationOutboxHealth(
   db: SupabaseClient,
 ): Promise<{ deadLetterCount: number; oldestPendingAt: string | null }> {

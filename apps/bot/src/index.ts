@@ -8,6 +8,7 @@ import {
   failOperationOutbox,
   getOperationOutboxHealth,
   isAdminUser,
+  markOperationOutboxNeedsReconciliation,
 } from '@salbot/db';
 import { db } from './lib/db';
 import { validateRequiredEnv, warnOnMissingChannelEnv } from './lib/config';
@@ -33,6 +34,9 @@ import * as divisionSync from './commands/division-sync';
 import * as logScouter from './commands/log-scouter';
 import * as profile from './commands/profile';
 import * as help from './commands/help';
+import * as trade from './commands/trade';
+import * as captainRoleConfig from './commands/captain-role-config';
+import * as organizationRoleConfig from './commands/organization-role-config';
 
 // Approval handlers
 import {
@@ -62,6 +66,9 @@ const commands = new Map<string, CommandModule>([
   [logScouter.data.name, logScouter],
   [profile.data.name, profile],
   [help.data.name, help],
+  [trade.data.name, trade],
+  [captainRoleConfig.data.name, captainRoleConfig],
+  [organizationRoleConfig.data.name, organizationRoleConfig],
 ]);
 
 validateRequiredEnv();
@@ -93,6 +100,8 @@ const outboxWorker = new OperationOutboxWorker(
       completeOperationOutbox(db, outboxId, workerId, externalId),
     fail: (outboxId, workerId, error, retryAfterSeconds) =>
       failOperationOutbox(db, outboxId, workerId, error, retryAfterSeconds),
+    reconcileAmbiguity: (outboxId, workerId, error) =>
+      markOperationOutboxNeedsReconciliation(db, outboxId, workerId, error),
     log: componentLog('operation_outbox'),
   },
   { workerId: `${hostname()}:${process.pid}:${randomUUID()}` },
@@ -184,12 +193,24 @@ client.on('interactionCreate', async (interaction) => {
         await profile.handleSeasonSelect(interaction);
       } else if (id.startsWith('sc_ed:')) {
         await logScouter.handleReviewSelect(interaction);
+      } else if (id.startsWith('tr_counter_offer:')) {
+        await trade.handleTradeCounterSelect(interaction);
+      } else if (id.startsWith('tr_')) {
+        await trade.handleTradeSelect(interaction);
       }
       return;
     }
 
     // Buttons
     if (interaction.isButton()) {
+      if (interaction.customId.startsWith('tr_')) {
+        await trade.handleTradeWizardButton(interaction);
+        return;
+      }
+      if (interaction.customId.startsWith('trade:')) {
+        await trade.handleTradeActionButton(interaction);
+        return;
+      }
       if (interaction.customId.startsWith('sc_up:')) {
         await logScouter.handleUploadButton(interaction);
         return;

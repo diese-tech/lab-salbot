@@ -129,7 +129,7 @@ The approval queue. Every captain approval command creates one before any match/
 ```sql
 id                          text PRIMARY KEY DEFAULT gen_random_uuid()::text
 type                        text NOT NULL
-  -- 'match_result' | 'reschedule' | 'admin_review'
+  -- 'match_result' | 'reschedule' | 'admin_review' | 'alias_change' | 'roster_trade'
 status                      text NOT NULL DEFAULT 'pending'
   -- 'pending' | 'pending_info' | 'approved' | 'denied' | 'cancelled'
 requested_by_discord_id     text NOT NULL
@@ -145,6 +145,28 @@ approved_at                 timestamptz
 created_at                  timestamptz NOT NULL DEFAULT now()
 updated_at                  timestamptz NOT NULL DEFAULT now()
 ```
+
+### Roster trade contract
+
+The immutable `sal-database` roster-trade release owns
+`roster_transactions`, `roster_transaction_revisions`,
+`roster_transaction_movements`, `roster_transaction_consents`, and
+`season_transaction_settings`. A submitted trade links exactly one
+`pending_actions(type = 'roster_trade')` row. SALBot calls service-role-only
+RPCs to create, counter, accept, decline, withdraw/revoke, and finally dispatch
+admin approval. Only the approval RPC writes `season_rosters`; that same
+database transaction appends `audit_logs` and enqueues independent durable
+bulletin and organization-role reconciliation work.
+
+`captain_role_mappings` and `organization_role_mappings` are canonical Discord
+configuration. They supplement, rather than replace, season-scoped captain
+identity in `season_rosters`. Transaction `source` values are
+`discord_workflow`, `web_workflow`, `manual_reconciliation`, or `migration`, so
+future trusted clients can share the ledger without fabricating Discord state.
+
+Ambiguous Discord message creation is moved to
+`operation_outbox.state = 'needs_reconciliation'`; automatic claims exclude
+that state until an administrator reconciles the stable marker.
 
 ### `audit_logs`
 
