@@ -1,0 +1,262 @@
+{
+  "schemaVersion": 1,
+  "seasonId": "s2",
+  "seasonName": "Season 2",
+  "reviewedAt": "2026-08-23",
+  "mappings": [
+    {
+      "divisionId": "terra",
+      "orgId": "org-d43fe343",
+      "orgTag": "BK",
+      "orgName": "Baba's Kitchen",
+      "discordRoleId": "1526406006555545630"
+    },
+    {
+      "divisionId": "terra",
+      "orgId": "org-93b59ded",
+      "orgTag": "BNO",
+      "orgName": "Boys Night Out",
+      "discordRoleId": "1529154516707049605"
+    },
+    {
+      "divisionId": "terra",
+      "orgId": "org-c9d78757",
+      "orgTag": "CPO",
+      "orgName": "Cyberpunk Otters",
+      "discordRoleId": "1526406168812064798"
+    },
+    {
+      "divisionId": "terra",
+      "orgId": "org-623eb7df",
+      "orgTag": "GD",
+      "orgName": "Golden Dragon",
+      "discordRoleId": "1529154934270988552"
+    },
+    {
+      "divisionId": "terra",
+      "orgId": "org-7e49d730",
+      "orgTag": "GRR",
+      "orgName": "Grizzlies",
+      "discordRoleId": "1526725984278155345"
+    },
+    {
+      "divisionId": "terra",
+      "orgId": "org-d02c2160",
+      "orgTag": "GSS",
+      "orgName": "Gunshow Shoguns",
+      "discordRoleId": "1526406120950726738"
+    },
+    {
+      "divisionId": "terra",
+      "orgId": "org-411a2985",
+      "orgTag": "KC",
+      "orgName": "Kappa Corporation",
+      "discordRoleId": "1526406219080798290"
+    },
+    {
+      "divisionId": "terra",
+      "orgId": "org-1282bf74",
+      "orgTag": "N20",
+      "orgName": "Nat 20",
+      "discordRoleId": "1528117147622969535"
+    },
+    {
+      "divisionId": "terra",
+      "orgId": "org-d34af012",
+      "orgTag": "SS",
+      "orgName": "Something Spicy",
+      "discordRoleId": "1528124466637574347"
+    },
+    {
+      "divisionId": "terra",
+      "orgId": "org-e710483c",
+      "orgTag": "TT",
+      "orgName": "Tiny Titans",
+      "discordRoleId": "1526406276328980601"
+    },
+    {
+      "divisionId": "terra",
+      "orgId": "org-e8baf6b7",
+      "orgTag": "VV",
+      "orgName": "Valhalla Vikings",
+      "discordRoleId": "1526406341399285840"
+    },
+    {
+      "divisionId": "terra",
+      "orgId": "org-4f2a54d8",
+      "orgTag": "WOA",
+      "orgName": "Warriors of Albion",
+      "discordRoleId": "1526406438631505920"
+    },
+
+    {
+      "divisionId": "solar",
+      "orgId": "org-d43fe343",
+      "orgTag": "BK",
+      "orgName": "Baba's Kitchen",
+      "discordRoleId": "1491162482394529863"
+    },
+    {
+      "divisionId": "solar",
+      "orgId": "org-93b59ded",
+      "orgTag": "BNO",
+      "orgName": "Boys Night Out",
+      "discordRoleId": "1529154566824661045"
+    },
+    {
+      "divisionId": "solar",
+      "orgId": "org-c9d78757",
+      "orgTag": "CPO",
+      "orgName": "Cyberpunk Otters",
+      "discordRoleId": "1491163450972311602"
+    },
+    {
+      "divisionId": "solar",
+      "orgId": "org-623eb7df",
+      "orgTag": "GD",
+      "orgName": "Golden Dragon",
+      "discordRoleId": "1529155017372598312"
+    },
+    {
+      "divisionId": "solar",
+      "orgId": "org-7e49d730",
+      "orgTag": "GRR",
+      "orgName": "Grizzlies",
+      "discordRoleId": "1526726137852596374"
+    },
+    {
+      "divisionId": "solar",
+      "orgId": "org-d02c2160",
+      "orgTag": "GSS",
+      "orgName": "Gunshow Shoguns",
+      "discordRoleId": "1491164610307559535"
+    },
+    {
+      "divisionId": "solar",
+      "orgId": "org-411a2985",
+      "orgTag": "KC",
+      "orgName": "Kappa Corporation",
+      "discordRoleId": "1491164859491029174"
+    },
+    {
+      "divisionId": "solar",
+      "orgId": "org-1282bf74",
+      "orgTag": "N20",
+      "orgName": "Nat 20",
+      "discordRoleId": "1528117422731825162"
+    },
+    {
+      "divisionId": "solar",
+      "orgId": "org-d34af012",
+      "orgTag": "SS",
+      "orgName": "Something Spicy",
+      "discordRoleId": "1528124564322648075"
+    },
+    {
+      "divisionId": "solar",
+      "orgId": "org-e710483c",
+      "orgTag": "TT",
+      "orgName": "Tiny Titans",
+      "discordRoleId": "1491166268013674719"
+    },
+    {
+      "divisionId": "solar",
+      "orgId": "org-e8baf6b7",
+      "orgTag": "VV",
+      "orgName": "Valhalla Vikings",
+      "discordRoleId": "1491168869677535514"
+    },
+    {
+      "divisionId": "solar",
+      "orgId": "org-4f2a54d8",
+      "orgTag": "WOA",
+      "orgName": "Warriors of Albion",
+      "discordRoleId": "1491169283236040886"
+    },
+
+    {
+      "divisionId": "lunar",
+      "orgId": "org-d43fe343",
+      "orgTag": "BK",
+      "orgName": "Baba's Kitchen",
+      "discordRoleId": "1491162190483423352"
+    },
+    {
+      "divisionId": "lunar",
+      "orgId": "org-93b59ded",
+      "orgTag": "BNO",
+      "orgName": "Boys Night Out",
+      "discordRoleId": "1529154578900058112"
+    },
+    {
+      "divisionId": "lunar",
+      "orgId": "org-c9d78757",
+      "orgTag": "CPO",
+      "orgName": "Cyberpunk Otters",
+      "discordRoleId": "1528119608609869885"
+    },
+    {
+      "divisionId": "lunar",
+      "orgId": "org-623eb7df",
+      "orgTag": "GD",
+      "orgName": "Golden Dragon",
+      "discordRoleId": "1529155074088108073"
+    },
+    {
+      "divisionId": "lunar",
+      "orgId": "org-7e49d730",
+      "orgTag": "GRR",
+      "orgName": "Grizzlies",
+      "discordRoleId": "1526726122941710568"
+    },
+    {
+      "divisionId": "lunar",
+      "orgId": "org-d02c2160",
+      "orgTag": "GSS",
+      "orgName": "Gunshow Shoguns",
+      "discordRoleId": "1491164708496080916"
+    },
+    {
+      "divisionId": "lunar",
+      "orgId": "org-411a2985",
+      "orgTag": "KC",
+      "orgName": "Kappa Corporation",
+      "discordRoleId": "1491165112646635531"
+    },
+    {
+      "divisionId": "lunar",
+      "orgId": "org-1282bf74",
+      "orgTag": "N20",
+      "orgName": "Nat 20",
+      "discordRoleId": "1528119035047444560"
+    },
+    {
+      "divisionId": "lunar",
+      "orgId": "org-d34af012",
+      "orgTag": "SS",
+      "orgName": "Something Spicy",
+      "discordRoleId": "1528124646027821107"
+    },
+    {
+      "divisionId": "lunar",
+      "orgId": "org-e710483c",
+      "orgTag": "TT",
+      "orgName": "Tiny Titans",
+      "discordRoleId": "1528119429232197632"
+    },
+    {
+      "divisionId": "lunar",
+      "orgId": "org-e8baf6b7",
+      "orgTag": "VV",
+      "orgName": "Valhalla Vikings",
+      "discordRoleId": "1491168879966294177"
+    },
+    {
+      "divisionId": "lunar",
+      "orgId": "org-4f2a54d8",
+      "orgTag": "WOA",
+      "orgName": "Warriors of Albion",
+      "discordRoleId": "1491169286276775957"
+    }
+  ]
+}

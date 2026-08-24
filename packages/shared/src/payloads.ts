@@ -5,6 +5,7 @@ import type {
   MatchResultPayload,
   PendingActionType,
   ReschedulePayload,
+  RosterDropPayload,
   RosterTradePayload,
 } from "./types";
 
@@ -13,6 +14,7 @@ export type PendingActionPayload =
   | ReschedulePayload
   | AdminReviewPayload
   | AliasChangePayload
+  | RosterDropPayload
   | RosterTradePayload;
 
 export function parsePendingActionPayload(
@@ -23,6 +25,7 @@ export function parsePendingActionPayload(
   if (type === "reschedule") return parseReschedulePayload(value);
   if (type === "admin_review") return parseAdminReviewPayload(value);
   if (type === "alias_change") return parseAliasChangePayload(value);
+  if (type === "roster_drop") return parseRosterDropPayload(value);
   return parseRosterTradePayload(value);
 }
 
@@ -86,15 +89,34 @@ export function parseRosterTradePayload(value: unknown): RosterTradePayload {
   const revision = payload.revision;
   const source = requireString(payload, "source");
   if (!Number.isInteger(revision) || Number(revision) < 1) {
-    throw new Error("roster_trade payload revision must be a positive integer.");
+    throw new Error(
+      "roster_trade payload revision must be a positive integer.",
+    );
   }
-  if (!["discord_workflow", "web_workflow", "manual_reconciliation", "migration"].includes(source)) {
+  if (
+    ![
+      "discord_workflow",
+      "web_workflow",
+      "manual_reconciliation",
+      "migration",
+    ].includes(source)
+  ) {
     throw new Error("roster_trade payload source is invalid.");
   }
   return {
     transactionId: requireString(payload, "transactionId"),
     revision: Number(revision),
     source: source as RosterTradePayload["source"],
+  };
+}
+
+export function parseRosterDropPayload(value: unknown): RosterDropPayload {
+  const payload = requireObject(value, "roster_drop payload");
+  const transaction = parseRosterTradePayload(payload);
+  return {
+    ...transaction,
+    orgId: requireString(payload, "orgId"),
+    playerId: requireString(payload, "playerId"),
   };
 }
 

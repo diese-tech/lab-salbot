@@ -34,7 +34,7 @@ Each division trade-block channel is an informal discussion space and the comman
 The bot provides audited administrator commands for configuring:
 
 - each division-specific Captain role;
-- each canonical organization role;
+- each organization-wide owner/advisor authority role;
 - the Caster role; and
 - the Production role.
 
@@ -44,12 +44,15 @@ Before any mapping mutation, the bot validates the actor against
 `admin_users`. Possessing a Discord staff role alone never authorizes operational
 configuration.
 
-Ordinary player division-role mappings remain separate from captain,
-organization, caster, and production authorization mappings.
+Player team-role mappings are a separate season/division/organization-scoped
+projection contract. They are applied from a reviewed bulk artifact rather than
+36 individual command entries and never grant transaction authority.
 
-Changing a mapping never grants access by itself. `sal-site` still verifies the
-member’s current Discord roles, season participation, room division, and
-server-side authorization rules.
+Changing an owner/advisor mapping identifies which existing Discord role grants
+organization-wide transaction authority. Captain authorization separately
+requires the member’s division Captain role and exact canonical
+season/division/organization captain assignment. Admins may operate every
+transaction workflow for remediation.
 
 ### Official commands
 
@@ -142,18 +145,18 @@ retry after confirming that no post exists.
 This provides crash-safe reconciliation and duplicate suppression without
 claiming that Discord itself supports transactional exactly-once publication.
 
-### Discord organization-role synchronization
+### Discord team-role synchronization
 
 Completed claims, drops, trades, and reversals enqueue durable Discord
-organization-role synchronization.
+team-role synchronization.
 
 The bot reconciles roles to the resulting canonical season roster:
 
-- a claim adds the claiming organization's Discord role to the player;
-- a drop removes the releasing organization's Discord role from the player;
-- a trade removes each moved player's former organization role and adds the
-  receiving organization role;
-- a reversal reconciles every affected player's organization roles to the
+- a claim adds the claiming season team's Discord role to the player;
+- a drop removes the releasing season team's Discord role from the player;
+- a trade removes each moved player's former division-team role and adds the
+  receiving division-team role;
+- a reversal reconciles every affected player's division-team roles to the
   resulting canonical roster; and
 - a Draft Position Swap does not change player roles.
 
@@ -163,7 +166,7 @@ transaction.
 
 Role reconciliation is idempotent and retryable. Before changing roles, the bot
 reads the canonical roster result and compares it with the member's current
-organization roles. A retry therefore converges on the same intended state
+team roles for the affected division only. A retry therefore converges on the same intended state
 instead of repeating a blind add or removal.
 
 If reconciliation fails or remains incomplete, the bot posts an actionable alert
@@ -171,7 +174,7 @@ to `CHANNEL_ADMIN_REVIEW`. The alert identifies:
 
 - the transaction;
 - the affected Discord member and player;
-- the intended organization role state;
+- the intended season/division/team role state;
 - the failed operation;
 - the latest error; and
 - whether another automatic retry is pending.
@@ -249,15 +252,16 @@ message.
 - Lease, deliver, and acknowledge durable outbox events.
 - Reconcile stable operation markers before retrying ambiguous Discord posts.
 - Render transaction and draft-conclusion messages using canonical organization tags and roster links.
-- Resolve the Discord member and organization-role mappings needed for each
+- Resolve the Discord member and scoped team-role mappings needed for each
   completed roster transaction.
-- Reconcile organization roles from canonical roster state instead of applying
+- Reconcile division-team roles from canonical roster state instead of applying
   unverified blind role mutations.
 - Retry failed role synchronization idempotently.
 - Post unresolved role-synchronization failures to the private administrator
   channel with sufficient context for manual remediation.
 - Implement audited configuration commands for division-specific Captain,
-  organization, Caster, and Production role mappings.
+  organization owner/advisor, Caster, and Production role mappings, plus an
+  audited reviewed bulk importer for season-team role mappings.
 - Validate every role-mapping command actor against `admin_users`.
 - Keep authorization-role mappings separate from ordinary player division-role
   synchronization.
