@@ -1,10 +1,10 @@
-import type { SupabaseClient } from '../client';
+import type { SupabaseClient } from "../client";
 import {
   parsePendingActionPayload,
   type PendingActionPayload,
   type PendingActionType,
-} from '@salbot/shared';
-import { toDatabaseJson } from '../json';
+} from "@salbot/shared";
+import { toDatabaseJson } from "../json";
 
 export async function createPendingAction(
   db: SupabaseClient,
@@ -14,10 +14,10 @@ export async function createPendingAction(
     matchId?: string;
     divisionId?: string;
     payloadJson: Record<string, unknown>;
-  }
+  },
 ) {
   const { data, error } = await db
-    .from('pending_actions')
+    .from("pending_actions")
     .insert({
       type: params.type,
       requested_by_discord_id: params.requestedByDiscordId,
@@ -31,7 +31,12 @@ export async function createPendingAction(
     .single();
 
   if (error) throw error;
-  return data as { id: string; type: string; status: string; [key: string]: unknown };
+  return data as {
+    id: string;
+    type: string;
+    status: string;
+    [key: string]: unknown;
+  };
 }
 
 export async function updatePendingActionMessages(
@@ -40,25 +45,25 @@ export async function updatePendingActionMessages(
   params: {
     adminReviewMessageId: string;
     publicReceiptMessageId?: string;
-  }
+  },
 ) {
   const { error } = await db
-    .from('pending_actions')
+    .from("pending_actions")
     .update({
       admin_review_message_id: params.adminReviewMessageId,
       public_receipt_message_id: params.publicReceiptMessageId ?? null,
       updated_at: new Date().toISOString(),
     })
-    .eq('id', id);
+    .eq("id", id);
 
   if (error) throw error;
 }
 
 export async function getPendingAction(db: SupabaseClient, id: string) {
   const { data, error } = await db
-    .from('pending_actions')
-    .select('*')
-    .eq('id', id)
+    .from("pending_actions")
+    .select("*")
+    .eq("id", id)
     .single();
 
   if (error || !data) return null;
@@ -87,26 +92,33 @@ export async function getPendingAction(db: SupabaseClient, id: string) {
 }
 
 function isPendingActionType(value: string): value is PendingActionType {
-  return ['match_result', 'reschedule', 'admin_review', 'alias_change', 'roster_trade'].includes(value);
+  return [
+    "match_result",
+    "reschedule",
+    "admin_review",
+    "alias_change",
+    "roster_trade",
+    "roster_drop",
+  ].includes(value);
 }
 
 // Atomic claim — only succeeds if status is still 'pending'. Returns false if already processed.
 export async function claimPendingActionForApproval(
   db: SupabaseClient,
   id: string,
-  adminDiscordId: string
+  adminDiscordId: string,
 ): Promise<boolean> {
   const { data, error } = await db
-    .from('pending_actions')
+    .from("pending_actions")
     .update({
-      status: 'approved',
+      status: "approved",
       approved_by_discord_id: adminDiscordId,
       approved_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
-    .eq('id', id)
-    .eq('status', 'pending')
-    .select('id');
+    .eq("id", id)
+    .eq("status", "pending")
+    .select("id");
 
   if (error) throw error;
   return (data?.length ?? 0) > 0;
@@ -116,20 +128,20 @@ export async function denyPendingAction(
   db: SupabaseClient,
   id: string,
   adminDiscordId: string,
-  note: string
+  note: string,
 ): Promise<boolean> {
   const { data, error } = await db
-    .from('pending_actions')
+    .from("pending_actions")
     .update({
-      status: 'denied',
+      status: "denied",
       approved_by_discord_id: adminDiscordId,
       approved_at: new Date().toISOString(),
       admin_note: note,
       updated_at: new Date().toISOString(),
     })
-    .eq('id', id)
-    .eq('status', 'pending')
-    .select('id');
+    .eq("id", id)
+    .eq("status", "pending")
+    .select("id");
 
   if (error) throw error;
   return (data?.length ?? 0) > 0;
@@ -139,18 +151,18 @@ export async function needsInfoPendingAction(
   db: SupabaseClient,
   id: string,
   adminDiscordId: string,
-  note: string
+  note: string,
 ): Promise<boolean> {
   const { data, error } = await db
-    .from('pending_actions')
+    .from("pending_actions")
     .update({
-      status: 'pending_info',
+      status: "pending_info",
       admin_note: note,
       updated_at: new Date().toISOString(),
     })
-    .eq('id', id)
-    .eq('status', 'pending')
-    .select('id');
+    .eq("id", id)
+    .eq("status", "pending")
+    .select("id");
 
   if (error) throw error;
   return (data?.length ?? 0) > 0;

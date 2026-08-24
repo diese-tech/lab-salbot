@@ -59,10 +59,13 @@ function stringArray(value: unknown, label: string): string[] {
   return value;
 }
 
-function parsePendingActionDecision(value: unknown): PendingActionDecisionResult {
+function parsePendingActionDecision(
+  value: unknown,
+): PendingActionDecisionResult {
   const label = "resolve_pending_action";
   const row = objectResult(value, label);
-  if (typeof row.applied !== "boolean") throw new Error(`${label} returned an invalid result.`);
+  if (typeof row.applied !== "boolean")
+    throw new Error(`${label} returned an invalid result.`);
   return {
     code: requiredString(row.code, label),
     actionId: requiredString(row.actionId, label),
@@ -78,7 +81,8 @@ function parsePendingActionDecision(value: unknown): PendingActionDecisionResult
 function parsePendingStatDecision(value: unknown): PendingStatDecisionResult {
   const label = "resolve_pending_stat_record";
   const row = objectResult(value, label);
-  if (typeof row.applied !== "boolean") throw new Error(`${label} returned an invalid result.`);
+  if (typeof row.applied !== "boolean")
+    throw new Error(`${label} returned an invalid result.`);
   return {
     code: requiredString(row.code, label),
     recordId: requiredString(row.recordId, label),
@@ -130,7 +134,12 @@ export async function resolvePendingStatRecord(
 }
 
 function parseOutboxRow(value: RawOutboxRow): OperationOutboxRow {
-  if (!value.id || !value.topic || value.state !== "processing" || value.attempts < 1) {
+  if (
+    !value.id ||
+    !value.topic ||
+    value.state !== "processing" ||
+    value.attempts < 1
+  ) {
     throw new Error("claim_operation_outbox returned an invalid result.");
   }
   return {
@@ -184,20 +193,55 @@ export async function failOperationOutbox(
   return { state: requiredString(result.state, "fail_operation_outbox") };
 }
 
+export async function resolveRosterDropPendingAction(
+  db: SupabaseClient,
+  params: {
+    actionId: string;
+    actorDiscordId: string;
+    decision: PendingActionDecision;
+    eligibilityStatus?:
+      "eligible" | "suspended_until" | "ineligible_for_season";
+    suspendedUntil?: string;
+    note?: string;
+  },
+): Promise<PendingActionDecisionResult> {
+  const { data, error } = await db.rpc("resolve_roster_drop_pending_action", {
+    p_action_id: params.actionId,
+    p_actor_discord_id: params.actorDiscordId,
+    p_decision: params.decision,
+    p_eligibility_status: params.eligibilityStatus,
+    p_suspended_until: params.suspendedUntil,
+    p_note: params.note,
+  });
+  if (error) throw error;
+  return parsePendingActionDecision(data);
+}
+
 export async function markOperationOutboxNeedsReconciliation(
   db: SupabaseClient,
   outboxId: string,
   workerId: string,
   errorMessage: string,
 ): Promise<{ state: string }> {
-  const { data, error } = await db.rpc('mark_operation_outbox_needs_reconciliation' as never, {
-    p_outbox_id: outboxId,
-    p_worker_id: workerId,
-    p_error: errorMessage,
-  } as never);
+  const { data, error } = await db.rpc(
+    "mark_operation_outbox_needs_reconciliation" as never,
+    {
+      p_outbox_id: outboxId,
+      p_worker_id: workerId,
+      p_error: errorMessage,
+    } as never,
+  );
   if (error) throw error;
-  const result = objectResult(data, 'mark_operation_outbox_needs_reconciliation');
-  return { state: requiredString(result.state, 'mark_operation_outbox_needs_reconciliation') };
+  const result = objectResult(
+    data,
+    "mark_operation_outbox_needs_reconciliation",
+  );
+  return {
+    state: requiredString(
+      result.state,
+      "mark_operation_outbox_needs_reconciliation",
+    ),
+  };
 }
 
 export async function getOperationOutboxHealth(

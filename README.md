@@ -101,17 +101,17 @@ Admin-only identity and role synchronization workflow. Admins upload a roster CS
 
 ### Roster transaction command scope
 
-ADR-009 defines the roster command surface. The `/trade`,
+ADR-009 defines the roster command surface. The `/trade`, `/drop`,
 `/captain-role-config`, and `/organization-role-config` slices are implemented:
 
-- `/trade` uses guided, season-scoped captain submission in division
-  trade-block channels;
+- `/trade` and `/drop` use guided, season-scoped captain, organization
+  owner/advisor, and administrator submission in division trade-block channels;
 - `/captain-role-config` and `/organization-role-config` provide audited admin
   mapping; and
-- completed trades use durable transaction bulletin and Discord organization
-  role-reconciliation workers.
+- completed trades and drops use durable transaction bulletin and Discord
+  division-team role-reconciliation workers.
 
-`/claim`, `/drop`, `/draft-position-swap`, `/broadcast-role-config`, draft
+`/claim`, `/draft-position-swap`, `/broadcast-role-config`, draft
 conclusion delivery, web transaction forms, and historical reconciliation UI
 remain accepted future work. See [`docs/commands.md`](docs/commands.md) for the
 complete permission and channel-scope contract.

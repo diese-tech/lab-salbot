@@ -49,19 +49,41 @@ describe("pending action payload validation", () => {
   });
 
   it("binds roster-trade pending actions to an exact canonical revision", () => {
-    expect(parsePendingActionPayload("roster_trade", {
-      transactionId: "3bd50934-a0db-4c95-a343-124034b71801",
-      revision: 2,
-      source: "discord_workflow",
-    })).toEqual({
+    expect(
+      parsePendingActionPayload("roster_trade", {
+        transactionId: "3bd50934-a0db-4c95-a343-124034b71801",
+        revision: 2,
+        source: "discord_workflow",
+      }),
+    ).toEqual({
       transactionId: "3bd50934-a0db-4c95-a343-124034b71801",
       revision: 2,
       source: "discord_workflow",
     });
-    expect(() => parsePendingActionPayload("roster_trade", {
+    expect(() =>
+      parsePendingActionPayload("roster_trade", {
+        transactionId: "3bd50934-a0db-4c95-a343-124034b71801",
+        revision: 0,
+        source: "discord_workflow",
+      }),
+    ).toThrow("positive integer");
+  });
+
+  it("binds roster-drop pending actions to the exact organization and player", () => {
+    expect(
+      parsePendingActionPayload("roster_drop", {
+        transactionId: "3bd50934-a0db-4c95-a343-124034b71801",
+        revision: 1,
+        source: "discord_workflow",
+        orgId: "org-a",
+        playerId: "player-a",
+      }),
+    ).toEqual({
       transactionId: "3bd50934-a0db-4c95-a343-124034b71801",
-      revision: 0,
+      revision: 1,
       source: "discord_workflow",
-    })).toThrow("positive integer");
+      orgId: "org-a",
+      playerId: "player-a",
+    });
   });
 });
