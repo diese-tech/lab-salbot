@@ -12,7 +12,8 @@ export async function createProofThread(
   matchId: string,
   matchLabel: string,
   week: number,
-  expectedScreenshots: number
+  expectedScreenshots: number,
+  actorDiscordId: string
 ): Promise<ThreadChannel> {
   const thread = await receiptMessage.startThread({
     name: `proof-week-${week}-${matchLabel}`,
@@ -26,7 +27,7 @@ export async function createProofThread(
     `_Do not upload duplicate screenshots directly to Discord. This thread closes after the final admin decision._`
   );
 
-  await setProofThread(db, matchId, thread.id, thread.url, expectedScreenshots);
+  await setProofThread(db, matchId, thread.id, thread.url, expectedScreenshots, actorDiscordId);
 
   activeProofThreads.set(thread.id, {
     matchId,

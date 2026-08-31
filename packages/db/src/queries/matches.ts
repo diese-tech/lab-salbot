@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '../client';
+import { writeAuditLog } from './audit-logs';
 
 const MATCH_FIELDS = `
   id, week, scheduled_date, scheduled_time, status,
@@ -119,23 +120,64 @@ export async function rescheduleMatch(
   return (data?.length ?? 0) > 0;
 }
 
+/**
+ * Attach a proof thread to a match.
+ *
+ * This writes to `matches`, so per AGENTS.md "No Silent Mutations" it records
+ * an `audit_logs` entry with the actor and the old/new values. Both the first
+ * attachment and the crash-recovery re-attachment run through here, so the
+ * history reads the same either way.
+ *
+ * `actorDiscordId` is the operator whose `/report-result` submission caused the
+ * thread to exist — a real Discord identity, never a synthetic one.
+ */
 export async function setProofThread(
   db: SupabaseClient,
   matchId: string,
   threadId: string,
   threadUrl: string,
-  screenshotExpected: number
+  screenshotExpected: number,
+  actorDiscordId: string
 ) {
+  const { data: previous, error: readError } = await db
+    .from('matches')
+    .select('proof_thread_id, proof_thread_url, screenshot_expected')
+    .eq('id', matchId)
+    .single();
+
+  if (readError) throw readError;
+
+  const nextValue = {
+    proof_thread_id: threadId,
+    proof_thread_url: threadUrl,
+    screenshot_expected: screenshotExpected,
+  };
+
   const { error } = await db
     .from('matches')
-    .update({
-      proof_thread_id: threadId,
-      proof_thread_url: threadUrl,
-      screenshot_expected: screenshotExpected,
-    })
+    .update(nextValue)
     .eq('id', matchId);
 
   if (error) throw error;
+
+  const previousRow = previous as unknown as {
+    proof_thread_id: string | null;
+    proof_thread_url: string | null;
+    screenshot_expected: number | null;
+  };
+
+  await writeAuditLog(db, {
+    actionType: 'proof_thread_recorded',
+    entityType: 'match',
+    entityId: matchId,
+    actorDiscordId,
+    oldValueJson: {
+      proof_thread_id: previousRow.proof_thread_id,
+      proof_thread_url: previousRow.proof_thread_url,
+      screenshot_expected: previousRow.screenshot_expected,
+    },
+    newValueJson: nextValue,
+  });
 }
 
 export async function incrementScreenshotCount(db: SupabaseClient, matchId: string) {

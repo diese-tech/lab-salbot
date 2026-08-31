@@ -109,6 +109,8 @@ describe('/report-result match stats entry', () => {
       'home-vs-away',
       2,
       3,
+      // The submitting host is the audited actor for the matches write.
+      'host-1',
     );
     const entryMessage = proofSend.mock.calls[0][0];
     expect(entryMessage.content).toContain('Enter stats');

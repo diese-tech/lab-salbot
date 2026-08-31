@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { completeMatch, getEligibleMatchesForCaptain, getEligibleMatchesForOperator, rescheduleMatch } from "./matches";
+import { completeMatch, getEligibleMatchesForCaptain, getEligibleMatchesForOperator, rescheduleMatch, setProofThread } from "./matches";
 
 // Regression test for F-02b: completeMatch/rescheduleMatch used to update the
 // `matches` row unconditionally, with no `status = 'scheduled'` precondition.
@@ -150,5 +150,92 @@ describe("rescheduleMatch status precondition", () => {
 
     expect(result).toBe(false);
     expect(rows.get("m-4")?.scheduled_date).toBeUndefined();
+  });
+});
+
+// AGENTS.md "No Silent Mutations" requires every `matches` write to record an
+// `audit_logs` entry with the actor and old/new values. setProofThread used to
+// update the row bare, on both first attachment and crash recovery.
+describe("setProofThread audit trail", () => {
+  function makeProofThreadDb(existing: Record<string, unknown>) {
+    const audits: Array<Record<string, unknown>> = [];
+    const updates: Array<Record<string, unknown>> = [];
+    const db = {
+      from(table: string) {
+        if (table === "audit_logs") {
+          return {
+            insert(payload: Record<string, unknown>) {
+              audits.push(payload);
+              return Promise.resolve({ error: null });
+            },
+          };
+        }
+        if (table !== "matches") throw new Error(`unexpected table ${table}`);
+        const builder = {
+          select() {
+            return builder;
+          },
+          update(payload: Record<string, unknown>) {
+            updates.push(payload);
+            return builder;
+          },
+          eq() {
+            return builder;
+          },
+          single() {
+            return Promise.resolve({ data: existing, error: null });
+          },
+          then(resolve: (value: { error: null }) => unknown) {
+            return Promise.resolve(resolve({ error: null }));
+          },
+        };
+        return builder;
+      },
+    };
+    return { db, audits, updates };
+  }
+
+  it("records the actor and the previous thread pointer on first attachment", async () => {
+    const { db, audits, updates } = makeProofThreadDb({
+      proof_thread_id: null,
+      proof_thread_url: null,
+      screenshot_expected: null,
+    });
+
+    await setProofThread(db as never, "m-5", "thread-1", "https://d/1", 3, "1234567890");
+
+    expect(updates[0]).toEqual({
+      proof_thread_id: "thread-1",
+      proof_thread_url: "https://d/1",
+      screenshot_expected: 3,
+    });
+    expect(audits).toHaveLength(1);
+    expect(audits[0]).toMatchObject({
+      action_type: "proof_thread_recorded",
+      entity_type: "match",
+      entity_id: "m-5",
+      actor_discord_id: "1234567890",
+    });
+    expect(audits[0].old_value_json).toMatchObject({ proof_thread_id: null });
+    expect(audits[0].new_value_json).toMatchObject({ proof_thread_id: "thread-1" });
+  });
+
+  it("captures the replaced pointer when crash recovery re-attaches a thread", async () => {
+    const { db, audits } = makeProofThreadDb({
+      proof_thread_id: "stale-thread",
+      proof_thread_url: "https://d/stale",
+      screenshot_expected: 2,
+    });
+
+    await setProofThread(db as never, "m-6", "thread-2", "https://d/2", 3, "9876543210");
+
+    expect(audits[0].old_value_json).toMatchObject({
+      proof_thread_id: "stale-thread",
+      screenshot_expected: 2,
+    });
+    expect(audits[0].new_value_json).toMatchObject({
+      proof_thread_id: "thread-2",
+      screenshot_expected: 3,
+    });
   });
 });

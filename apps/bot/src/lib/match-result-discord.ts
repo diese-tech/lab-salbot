@@ -70,6 +70,7 @@ export async function ensureMatchResultDiscordArtifacts(params: {
       proofThread.id,
       proofThread.url,
       action.payloadJson.parsed.gamesPlayed,
+      action.requestedByDiscordId,
     );
   }
   if (!proofThread) {
@@ -81,6 +82,7 @@ export async function ensureMatchResultDiscordArtifacts(params: {
       matchLabel,
       match.week,
       action.payloadJson.parsed.gamesPlayed,
+      action.requestedByDiscordId,
     );
     createdProofThread = true;
   }
