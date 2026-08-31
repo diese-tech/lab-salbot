@@ -9,6 +9,7 @@ export * from "./divisions";
 export * from "./division-role-mappings";
 export * from "./scouters";
 export * from "./operation-outbox";
+export * from "./match-reports";
 export * from "./roster-trades";
 export * from "./roster-drops";
 export * from "./roster-role-mappings";

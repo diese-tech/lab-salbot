@@ -238,6 +238,10 @@ client.on("interactionCreate", async (interaction) => {
         await trade.handleTradeActionButton(interaction);
         return;
       }
+      if (interaction.customId.startsWith("mr_stats:")) {
+        await reportResult.handleEnterStatsButton(interaction);
+        return;
+      }
       if (interaction.customId.startsWith("sc_up:")) {
         await logScouter.handleUploadButton(interaction);
         return;

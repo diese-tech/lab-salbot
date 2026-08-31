@@ -1,16 +1,22 @@
 import type { APIInteractionGuildMember, GuildMember } from 'discord.js';
 
-export type OperationalCapability = 'report-result' | 'log-scouter' | 'trade';
+export type OperationalCapability =
+  | 'report-result'
+  | 'log-scouter'
+  | 'trade'
+  | 'enter-match-stats';
 export type CommandAccessMember =
   | Pick<APIInteractionGuildMember, 'roles'>
   | Pick<GuildMember, 'roles'>
   | null;
 
-const ROLE_ENV_NAMES = ['SAL_OPERATOR_ROLE_IDS', 'SAL_ADMIN_ROLE_IDS'] as const;
+const REQUIRED_ROLE_ENV_NAMES = ['SAL_OPERATOR_ROLE_IDS', 'SAL_ADMIN_ROLE_IDS'] as const;
+type RequiredRoleEnvName = (typeof REQUIRED_ROLE_ENV_NAMES)[number];
+type RoleEnvName = RequiredRoleEnvName | 'SAL_MATCH_STATS_ROLE_IDS';
 const DISCORD_ROLE_ID = /^\d{17,20}$/;
 
 function configuredRoleIds(
-  name: (typeof ROLE_ENV_NAMES)[number],
+  name: RoleEnvName,
   env: NodeJS.ProcessEnv,
 ): string[] {
   const roleIds = (env[name] ?? '')
@@ -24,19 +30,30 @@ function configuredRoleIds(
 }
 
 export function validateCommandAccessEnv(env: NodeJS.ProcessEnv = process.env): void {
-  for (const name of ROLE_ENV_NAMES) configuredRoleIds(name, env);
+  for (const name of REQUIRED_ROLE_ENV_NAMES) configuredRoleIds(name, env);
+  if (env.SAL_MATCH_STATS_ROLE_IDS?.trim()) {
+    configuredRoleIds('SAL_MATCH_STATS_ROLE_IDS', env);
+  }
 }
 
 export function hasCommandAccess(
   member: CommandAccessMember,
-  _capability: OperationalCapability,
+  capability: OperationalCapability,
   env: NodeJS.ProcessEnv = process.env,
 ): boolean {
   if (!member) return false;
 
   let authorizedRoleIds: string[];
   try {
-    authorizedRoleIds = ROLE_ENV_NAMES.flatMap((name) => configuredRoleIds(name, env));
+    validateCommandAccessEnv(env);
+    const operatorRoleEnv = capability === 'enter-match-stats'
+      && env.SAL_MATCH_STATS_ROLE_IDS?.trim()
+      ? 'SAL_MATCH_STATS_ROLE_IDS'
+      : 'SAL_OPERATOR_ROLE_IDS';
+    authorizedRoleIds = [
+      ...configuredRoleIds(operatorRoleEnv, env),
+      ...configuredRoleIds('SAL_ADMIN_ROLE_IDS', env),
+    ];
   } catch {
     return false;
   }

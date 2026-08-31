@@ -8,6 +8,7 @@ const OPERATOR_ROLES = [
   '444444444444444444',
 ];
 const ADMIN_ROLE = '555555555555555555';
+const MATCH_STATS_ROLE = '666666666666666666';
 
 function member(...roleIds: string[]) {
   return { roles: roleIds };
@@ -37,7 +38,27 @@ describe('Discord role-backed operational command access', () => {
     expect(hasCommandAccess(member(ADMIN_ROLE), 'report-result')).toBe(true);
     expect(hasCommandAccess(member(ADMIN_ROLE), 'log-scouter')).toBe(true);
     expect(hasCommandAccess(member(ADMIN_ROLE), 'trade')).toBe(true);
+    expect(hasCommandAccess(member(ADMIN_ROLE), 'enter-match-stats')).toBe(true);
     expect(hasAdminCommandAccess(member(ADMIN_ROLE))).toBe(true);
+  });
+
+  it('uses the match-stats capability override without widening report-result access', () => {
+    process.env.SAL_OPERATOR_ROLE_IDS = OPERATOR_ROLES.join(',');
+    process.env.SAL_ADMIN_ROLE_IDS = ADMIN_ROLE;
+    process.env.SAL_MATCH_STATS_ROLE_IDS = MATCH_STATS_ROLE;
+
+    expect(hasCommandAccess(member(MATCH_STATS_ROLE), 'enter-match-stats')).toBe(true);
+    expect(hasCommandAccess(member(MATCH_STATS_ROLE), 'report-result')).toBe(false);
+    expect(hasCommandAccess(member(OPERATOR_ROLES[0]), 'enter-match-stats')).toBe(false);
+    expect(hasCommandAccess(member(ADMIN_ROLE), 'enter-match-stats')).toBe(true);
+  });
+
+  it('falls back to the operator allowlist when no match-stats override is configured', () => {
+    process.env.SAL_OPERATOR_ROLE_IDS = OPERATOR_ROLES.join(',');
+    process.env.SAL_ADMIN_ROLE_IDS = ADMIN_ROLE;
+    delete process.env.SAL_MATCH_STATS_ROLE_IDS;
+
+    expect(hasCommandAccess(member(OPERATOR_ROLES[0]), 'enter-match-stats')).toBe(true);
   });
 
   it('supports cached GuildMember roles from normal gateway interactions', () => {
@@ -65,5 +86,10 @@ describe('Discord role-backed operational command access', () => {
     process.env.SAL_OPERATOR_ROLE_IDS = 'not-a-role';
     expect(hasCommandAccess(member(ADMIN_ROLE), 'log-scouter')).toBe(false);
     expect(() => validateCommandAccessEnv()).toThrow(/SAL_OPERATOR_ROLE_IDS/);
+
+    process.env.SAL_OPERATOR_ROLE_IDS = OPERATOR_ROLES.join(',');
+    process.env.SAL_MATCH_STATS_ROLE_IDS = 'not-a-role';
+    expect(hasCommandAccess(member(ADMIN_ROLE), 'enter-match-stats')).toBe(false);
+    expect(() => validateCommandAccessEnv()).toThrow(/SAL_MATCH_STATS_ROLE_IDS/);
   });
 });

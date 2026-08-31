@@ -49,6 +49,11 @@ malformed role configuration fails closed. `/report-result` then presents the
 scheduled, non-archived matches in the current season; downstream pending
 action and admin review safeguards are unchanged.
 
+The `enter-match-stats` capability uses `SAL_MATCH_STATS_ROLE_IDS` when that
+optional allowlist is configured and otherwise falls back to
+`SAL_OPERATOR_ROLE_IDS`. `SAL_ADMIN_ROLE_IDS` always remains an override. The
+button rechecks current member roles before sal-site mints a host-bound link.
+
 `/reschedule` still uses its existing linked-captain/org match filter. It is
 not part of the initial ADR-009 role-authorization migration.
 
@@ -109,8 +114,12 @@ The bot does not delete old cards — they're updated in place to preserve histo
 When a captain reports a result, the bot opens a thread under the public receipt:
 
 - Named `proof-week-{week}-{home-tag}-vs-{away-tag}`.
-- Tracks a running screenshot count against an expected count derived from the score (e.g. a `2-1` result expects 3 games × 2 screenshots = 6).
-- Any message with an image attachment posted in the thread increments the count and edits the thread's tracking message.
+- Contains a durable **Enter stats** button for the host correction workflow.
+- The host uploads screenshots once on sal-site. A durable outbox projection
+  mirrors those stored screenshots into the thread after host submission and
+  posts the admin stats-review card exactly once.
+- Direct image attachments continue to increment the legacy proof counter, but
+  they are evidence only and do not enter the official stat workflow.
 - **Screenshot counts are tracked in memory only** (`activeProofThreads` in `apps/bot/src/lib/proof-thread.ts`) — a bot restart before the result is approved loses in-flight progress tracking, though the uploaded images themselves remain in the thread. Full persistence is a future phase.
 - On a terminal admin decision (**Approve**, **Deny**, or stale cancellation),
   the durable outbox worker posts one marked closing message and archives the

@@ -1,5 +1,10 @@
-import { describe, expect, it } from "vitest";
-import { claimPendingActionForApproval, denyPendingAction, needsInfoPendingAction } from "./pending-actions";
+import { describe, expect, it, vi } from "vitest";
+import {
+  claimPendingActionForApproval,
+  denyPendingAction,
+  getActiveMatchResultPendingAction,
+  needsInfoPendingAction,
+} from "./pending-actions";
 
 // Regression test for a bug where these functions checked `count` from
 // Supabase without requesting it (`{ count: 'exact' }`), so `count` was
@@ -65,5 +70,53 @@ describe("pending action status guard (claim/deny/needs-info)", () => {
 
     expect(await needsInfoPendingAction(db, "pa-3", "admin-1", "need more info")).toBe(true);
     expect(rows.get("pa-3")?.status).toBe("pending_info");
+  });
+});
+
+describe('active match-result recovery', () => {
+  it('loads the existing actionable submission and its original host', async () => {
+    const maybeSingle = vi.fn().mockResolvedValue({
+      data: {
+        id: 'action-1',
+        match_id: 'match-1',
+        requested_by_discord_id: 'original-host',
+        status: 'pending_info',
+        payload_json: { winnerOrgId: 'org-home', score: '2-1' },
+        admin_review_message_id: 'review-1',
+        public_receipt_message_id: 'receipt-1',
+      },
+      error: null,
+    });
+    const inFilter = vi.fn(() => ({ maybeSingle }));
+    const eqType = vi.fn(() => ({ in: inFilter }));
+    const eqMatch = vi.fn(() => ({ eq: eqType }));
+    const select = vi.fn(() => ({ eq: eqMatch }));
+    const from = vi.fn(() => ({ select }));
+
+    await expect(
+      getActiveMatchResultPendingAction({ from } as never, 'match-1'),
+    ).resolves.toEqual({
+      id: 'action-1',
+      matchId: 'match-1',
+      requestedByDiscordId: 'original-host',
+      status: 'pending_info',
+      payloadJson: {
+        winnerOrgId: 'org-home',
+        score: '2-1',
+        parsed: {
+          winnerGames: 2,
+          loserGames: 1,
+          gamesPlayed: 3,
+          expectedScreenshots: 3,
+        },
+      },
+      adminReviewMessageId: 'review-1',
+      publicReceiptMessageId: 'receipt-1',
+    });
+
+    expect(from).toHaveBeenCalledWith('pending_actions');
+    expect(eqMatch).toHaveBeenCalledWith('match_id', 'match-1');
+    expect(eqType).toHaveBeenCalledWith('type', 'match_result');
+    expect(inFilter).toHaveBeenCalledWith('status', ['pending', 'pending_info']);
   });
 });

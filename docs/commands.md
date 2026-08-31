@@ -15,7 +15,7 @@ handlers, database contracts, permissions, and deployment configuration ship.
 
 | Command                     | Who                                    | What it does                                                                                                                 |
 | --------------------------- | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `/report-result`            | SAL Operators / Admins                 | Report a completed match's score. Posts a public receipt, opens a proof-upload thread, and sends the result to admin review. |
+| `/report-result`            | SAL Operators / Admins                 | Report a completed match's score, then open the host web flow to upload and correct official stats before admin review. |
 | `/reschedule`               | Captains / Admins                      | Request a new date/time for an upcoming match. Posts a public receipt and sends the request to admin review.                 |
 | `/request-admin-review`     | Everyone                               | Escalate an issue (score dispute, scheduling, eligibility, other) directly to admins. No public receipt.                     |
 | `/rules`                    | Everyone                               | Ask a question about the league ruleset. Answered by an AI assistant restricted to the official rules text.                  |
@@ -183,9 +183,16 @@ state.
 **On submit:**
 
 - Creates a `pending_actions` row (`type: 'match_result'`).
+- Creates or retrieves the one canonical `match_reports` row linked to that pending action.
 - Posts a public "Under Review" receipt embed to that division's results channel (`CHANNEL_RESULTS_SOLAR` / `_LUNAR` / `_TERRA`).
-- Opens a proof-upload thread under the receipt, named `proof-week-{week}-{home-tag}-vs-{away-tag}`. Screenshot counts are tracked **in memory only** — they reset if the bot restarts before the result is approved.
+- Opens a proof thread under the receipt, named `proof-week-{week}-{home-tag}-vs-{away-tag}`, with an **Enter stats** button.
 - Posts an admin review card with **Approve / Deny / ⚠️ Needs Info** buttons to `#admin-review` (`CHANNEL_ADMIN_REVIEW`).
+
+**Enter stats:** rechecks the member's current Discord-role capability, then
+issues a private host-bound sal-site review link. The host uploads screenshots
+once on the site. After host submission, durable screenshots are mirrored into
+the proof thread and an idempotent admin stats-review card links to the
+canonical admin page. SALBot never writes official stats directly.
 
 **On admin Approve:** the match is marked `completed` with the winner/score, the proof thread is closed and archived, and both embeds are updated in place (not deleted).
 

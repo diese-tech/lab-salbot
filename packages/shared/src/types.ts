@@ -20,6 +20,7 @@ export type AuditActionType =
   | "pending_action_cancelled"
   | "match_result_recorded"
   | "match_rescheduled"
+  | "proof_thread_recorded"
   | "stat_approved"
   | "stat_rejected"
   | "stat_corrected"

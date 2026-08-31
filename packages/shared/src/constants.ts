@@ -7,7 +7,7 @@ export const STATUS_EMOJI = {
   revised: '🔁',
 } as const;
 
-export const SCREENSHOTS_PER_GAME = 2;
+export const SCREENSHOTS_PER_GAME = 1;
 
 export const CONFIDENCE_THRESHOLDS = {
   standard: 0.85,

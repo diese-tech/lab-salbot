@@ -1,6 +1,13 @@
-import type { ChatInputCommandInteraction, StringSelectMenuInteraction, ModalSubmitInteraction, TextChannel } from 'discord.js';
+import type {
+  ButtonInteraction,
+  ChatInputCommandInteraction,
+  ModalSubmitInteraction,
+  StringSelectMenuInteraction,
+} from 'discord.js';
 import {
   ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
   StringSelectMenuBuilder,
   ModalBuilder,
   TextInputBuilder,
@@ -8,21 +15,19 @@ import {
 } from 'discord.js';
 import {
   getEligibleMatchesForOperator,
-  createPendingAction,
-  updatePendingActionMessages,
+  createMatchResultActionWithReport,
+  getActiveMatchResultPendingAction,
 } from '@salbot/db';
 import { parseScore } from '@salbot/shared';
 import type { MatchResultPayload } from '@salbot/shared';
 import { db } from '../lib/db';
-import { getAdminReviewChannelId, getResultsChannelId } from '../lib/channels';
-import {
-  buildMatchResultReceiptEmbed,
-  buildMatchResultAdminEmbed,
-  buildApprovalButtons,
-} from '../lib/embeds';
-import { createProofThread } from '../lib/proof-thread';
-import { isUniqueViolation } from '../lib/errors';
+import { buildEnterStatsButton } from '../lib/embeds';
 import { hasCommandAccess } from '../lib/command-access';
+import { issueMatchReportHostReviewLink } from '../lib/match-report-site';
+import {
+  ensureMatchResultDiscordArtifacts,
+  type MatchResultArtifactAction,
+} from '../lib/match-result-discord';
 
 export const data = {
   name: 'report-result',
@@ -150,6 +155,7 @@ export async function handleScoreModal(interaction: ModalSubmitInteraction) {
     .from('matches')
     .select(`
       id, week, scheduled_date, scheduled_time, division_id,
+      proof_thread_id, proof_thread_url,
       home_org_id, away_org_id,
       home_org:orgs!home_org_id(id, name, tag),
       away_org:orgs!away_org_id(id, name, tag),
@@ -166,7 +172,6 @@ export async function handleScoreModal(interaction: ModalSubmitInteraction) {
   const homeOrg = match.home_org as unknown as { id: string; name: string; tag: string };
   const awayOrg = match.away_org as unknown as { id: string; name: string; tag: string };
   const division = match.division as unknown as { id: string; name: string };
-  const winnerOrg = winnerOrgId === homeOrg.id ? homeOrg : awayOrg;
   const matchInfo = {
     id: match.id as string,
     week: match.week as number,
@@ -179,59 +184,70 @@ export async function handleScoreModal(interaction: ModalSubmitInteraction) {
 
   const payload: MatchResultPayload = { winnerOrgId, score: scoreRaw, parsed };
 
-  let pendingAction;
-  try {
-    pendingAction = await createPendingAction(db, {
-      type: 'match_result',
-      requestedByDiscordId: interaction.user.id,
-      matchId,
+  const matchReport = await createMatchResultActionWithReport(
+    db,
+    matchId,
+    interaction.user.id,
+    payload,
+  );
+  const activeAction = await getActiveMatchResultPendingAction(db, matchId);
+  if (!activeAction
+    || activeAction.id !== matchReport.actionId
+    || activeAction.requestedByDiscordId !== matchReport.hostDiscordId) {
+    throw new Error('Atomic match-result creation returned inconsistent recovery state.');
+  }
+  const pendingAction: MatchResultArtifactAction = activeAction;
+  const recovered = !matchReport.created;
+  const winnerOrg = pendingAction.payloadJson.winnerOrgId === homeOrg.id ? homeOrg : awayOrg;
+  const proofThread = await ensureMatchResultDiscordArtifacts({
+    client: interaction.client,
+    action: pendingAction,
+    reportId: matchReport.reportId,
+    match: {
+      ...matchInfo,
       divisionId: match.division_id as string,
-      payloadJson: payload as unknown as Record<string, unknown>,
-    });
-  } catch (err) {
-    // Postgres unique_violation (022_pending_result_uniqueness.sql on sal-site) —
-    // a match_result pending_action already exists for this match in a
-    // pending/pending_info state. Surface a friendly message instead of a raw error.
-    if (isUniqueViolation(err)) {
-      await interaction.editReply(
-        'A result for this match is already awaiting review — an admin needs to process the existing submission first.'
-      );
-      return;
+      proofThreadId: match.proof_thread_id as string | null,
+    },
+    winnerOrg,
+  });
+
+  if (recovered) {
+    const content = 'A result for this match is already awaiting review — its receipt, proof thread, and admin card were recovered.';
+    if (pendingAction.requestedByDiscordId === interaction.user.id) {
+      await interaction.editReply({
+        content: `${content} Use **Enter stats** below to continue.`,
+        components: [buildEnterStatsButton(matchReport.reportId)],
+      });
+    } else {
+      await interaction.editReply(content);
     }
-    throw err;
+  } else {
+    await interaction.editReply(
+      `✅ Result submitted and waiting for host stats.\n📊 Use **Enter stats** in the proof thread to upload screenshots and review the extraction: ${proofThread.url}`,
+    );
+  }
+}
+
+export async function handleEnterStatsButton(interaction: ButtonInteraction) {
+  if (!hasCommandAccess(interaction.member, 'enter-match-stats')) {
+    await interaction.reply({
+      content: 'You no longer have permission to enter match stats.',
+      ephemeral: true,
+    });
+    return;
   }
 
-  // Public receipt
-  const resultsChannelId = getResultsChannelId(match.division_id as string);
-  const resultsChannel = await interaction.client.channels.fetch(resultsChannelId) as TextChannel;
-  const receiptEmbed = buildMatchResultReceiptEmbed(matchInfo, winnerOrg, scoreRaw, interaction.user.id);
-  const receiptMsg = await resultsChannel.send({ embeds: [receiptEmbed] });
-
-  // Proof thread
-  const matchLabel = `${homeOrg.tag.toLowerCase()}-vs-${awayOrg.tag.toLowerCase()}`;
-  const proofThread = await createProofThread(
-    resultsChannel,
-    receiptMsg,
-    matchId,
-    matchLabel,
-    match.week as number,
-    parsed.expectedScreenshots
+  const [, reportId] = interaction.customId.split(':');
+  await interaction.deferReply({ ephemeral: true });
+  const link = await issueMatchReportHostReviewLink(reportId, interaction.user.id);
+  const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setLabel('Open stats review')
+      .setStyle(ButtonStyle.Link)
+      .setURL(link.reviewUrl),
   );
-
-  // Admin review card
-  const adminChannel = await interaction.client.channels.fetch(getAdminReviewChannelId()) as TextChannel;
-  const adminEmbed = buildMatchResultAdminEmbed(matchInfo, winnerOrg, scoreRaw, interaction.user.id, pendingAction.id);
-  const reviewMsg = await adminChannel.send({
-    embeds: [adminEmbed],
-    components: [buildApprovalButtons(pendingAction.id)],
+  await interaction.editReply({
+    content: 'This private link is bound to your Discord account and expires after use.',
+    components: [row],
   });
-
-  await updatePendingActionMessages(db, pendingAction.id, {
-    adminReviewMessageId: reviewMsg.id,
-    publicReceiptMessageId: receiptMsg.id,
-  });
-
-  await interaction.editReply(
-    `✅ Result submitted for admin review.\n📸 Upload your proof screenshots here: ${proofThread.url}`
-  );
 }

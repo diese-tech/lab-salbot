@@ -1,3 +1,5 @@
+import { siteRequest as requestSite, type SiteRequestDependencies } from './site-request';
+
 export type ScouterParticipant = {
   side: "order" | "chaos";
   rawIgn: string;
@@ -93,27 +95,7 @@ export type ScouterExtractInput = {
   expectedSmiteMatchId?: string;
 };
 
-type FetchResponse = {
-  ok: boolean;
-  status: number;
-  json: () => Promise<unknown>;
-};
-
-type FetchImplementation = (
-  input: URL,
-  init: {
-    method: "GET" | "POST" | "PATCH";
-    headers: Record<string, string>;
-    body?: string;
-    signal: AbortSignal;
-  },
-) => Promise<FetchResponse>;
-
-export type ScouterSiteDependencies = {
-  siteUrl?: string;
-  token?: string;
-  fetchImpl?: FetchImplementation;
-};
+export type ScouterSiteDependencies = SiteRequestDependencies;
 
 export class ScouterIngestError extends Error {
   constructor(
@@ -126,7 +108,19 @@ export class ScouterIngestError extends Error {
   }
 }
 
-const REQUEST_TIMEOUT_MS = 90_000;
+function siteRequest(
+  path: string,
+  method: 'GET' | 'POST' | 'PATCH',
+  body: Record<string, unknown> | undefined,
+  dependencies: ScouterSiteDependencies,
+): Promise<unknown> {
+  return requestSite(path, method, body, dependencies, {
+    unconfigured: 'Scouter ingestion is not configured. Ask an admin to set SAL_SITE_URL and SAL_SITE_INTERNAL_TOKEN.',
+    fallback: (status) => `Scouter request failed with HTTP ${status}.`,
+    create: (message, status, rawResponse) =>
+      new ScouterIngestError(message, status, rawResponse),
+  });
+}
 
 export async function extractScouterDraft(
   input: ScouterExtractInput,
@@ -275,54 +269,6 @@ export async function confirmScouterDraft(
   };
 }
 
-async function siteRequest(
-  path: string,
-  method: "GET" | "POST" | "PATCH",
-  body: Record<string, unknown> | undefined,
-  dependencies: ScouterSiteDependencies,
-): Promise<unknown> {
-  const siteUrl = dependencies.siteUrl ?? process.env.SAL_SITE_URL;
-  const token = dependencies.token ?? process.env.SAL_SITE_INTERNAL_TOKEN;
-  const fetchImpl = dependencies.fetchImpl ?? fetch;
-  if (!siteUrl || !token) {
-    throw new ScouterIngestError(
-      "Scouter ingestion is not configured. Ask an admin to set SAL_SITE_URL and SAL_SITE_INTERNAL_TOKEN.",
-      503,
-    );
-  }
-
-  let response: FetchResponse;
-  try {
-    response = await fetchImpl(new URL(path, siteUrl), {
-      method,
-      headers: {
-        Authorization: `Bearer ${token}`,
-        ...(body ? { "Content-Type": "application/json" } : {}),
-      },
-      ...(body ? { body: JSON.stringify(body) } : {}),
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    });
-  } catch (error) {
-    throw new ScouterIngestError(
-      `Could not reach sal-site: ${error instanceof Error ? error.message : String(error)}`,
-      503,
-    );
-  }
-
-  const responseBody = await response.json().catch(() => null);
-  if (!response.ok) {
-    const message =
-      isRecord(responseBody) && typeof responseBody.error === "string"
-        ? responseBody.error
-        : `Scouter request failed with HTTP ${response.status}.`;
-    const rawResponse =
-      isRecord(responseBody) && typeof responseBody.raw_response === "string"
-        ? responseBody.raw_response
-        : undefined;
-    throw new ScouterIngestError(message, response.status, rawResponse);
-  }
-  return responseBody;
-}
 
 function parseDraft(body: unknown): ScouterDraft {
   if (

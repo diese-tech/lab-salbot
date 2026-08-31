@@ -72,12 +72,15 @@ This distinction matters for:
 An authorized Discord operator selects a current-season match from a Supabase-driven dropdown → enters winner + score → system creates:
 
 1. Public embed in `#match-results-[division]`
-2. Dedicated proof thread for screenshot upload
+2. Dedicated proof thread with an **Enter stats** button
 3. Admin review card in `#admin-review`
 4. Pending action in Supabase
 5. Audit log entry
 
-Screenshots are uploaded to the proof thread, not inline to the command. This supports 6–10 screenshots per match without degrading UX.
+The host uploads screenshots once in the sal-site correction flow. After host
+submission, SALBot mirrors the durable stored images into the proof thread and
+posts an idempotent admin stats-review card. Official stats remain
+site/database approval-only.
 
 `/report-result` and `/log-scouter` authorize from the centrally configured
 `SAL_OPERATOR_ROLE_IDS` and `SAL_ADMIN_ROLE_IDS`. OAuth/player linkage supplies

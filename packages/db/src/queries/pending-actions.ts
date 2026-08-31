@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "../client";
 import {
+  parseMatchResultPayload,
   parsePendingActionPayload,
+  type MatchResultPayload,
   type PendingActionPayload,
   type PendingActionType,
 } from "@salbot/shared";
@@ -88,6 +90,45 @@ export async function getPendingAction(db: SupabaseClient, id: string) {
     public_receipt_message_id: string | null;
     approved_by_discord_id: string | null;
     approved_at: string | null;
+  };
+}
+
+export async function getActiveMatchResultPendingAction(
+  db: SupabaseClient,
+  matchId: string,
+): Promise<{
+  id: string;
+  matchId: string;
+  requestedByDiscordId: string;
+  status: 'pending' | 'pending_info';
+  payloadJson: MatchResultPayload;
+  adminReviewMessageId: string | null;
+  publicReceiptMessageId: string | null;
+} | null> {
+  const { data, error } = await db
+    .from('pending_actions')
+    .select(`
+      id, match_id, requested_by_discord_id, status, payload_json,
+      admin_review_message_id, public_receipt_message_id
+    `)
+    .eq('match_id', matchId)
+    .eq('type', 'match_result')
+    .in('status', ['pending', 'pending_info'])
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+  if (data.status !== 'pending' && data.status !== 'pending_info') {
+    throw new Error(`Active pending action ${data.id} has an invalid status.`);
+  }
+  return {
+    id: data.id,
+    matchId: data.match_id as string,
+    requestedByDiscordId: data.requested_by_discord_id,
+    status: data.status,
+    payloadJson: parseMatchResultPayload(data.payload_json),
+    adminReviewMessageId: data.admin_review_message_id,
+    publicReceiptMessageId: data.public_receipt_message_id,
   };
 }
 
