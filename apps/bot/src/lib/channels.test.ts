@@ -3,6 +3,9 @@ import {
   getAdminReviewChannelId,
   getResultsChannelId,
   getReschedulesChannelId,
+  getTradeBlockChannelId,
+  getTradeDivisionForChannel,
+  getTransactionsChannelId,
 } from "./channels";
 import { UserFacingError } from "./errors";
 
@@ -18,6 +21,10 @@ const ENV_VARS = [
   "CHANNEL_RESCHEDULES_SOLAR",
   "CHANNEL_RESCHEDULES_LUNAR",
   "CHANNEL_RESCHEDULES_TERRA",
+  "CHANNEL_TRADE_BLOCK_SOLAR",
+  "CHANNEL_TRADE_BLOCK_LUNAR",
+  "CHANNEL_TRADE_BLOCK_TERRA",
+  "CHANNEL_TRANSACTIONS",
 ] as const;
 
 describe("channels division -> env-var mapping", () => {
@@ -52,6 +59,18 @@ describe("channels division -> env-var mapping", () => {
     expect(getReschedulesChannelId("solar")).toBe("reschedules-solar-id");
     expect(getReschedulesChannelId("lunar")).toBe("reschedules-lunar-id");
     expect(getReschedulesChannelId("terra")).toBe("reschedules-terra-id");
+  });
+
+  it("maps trade-block channels in both directions and exposes the consolidated channel", () => {
+    process.env.CHANNEL_TRADE_BLOCK_SOLAR = "trade-solar-id";
+    process.env.CHANNEL_TRADE_BLOCK_LUNAR = "trade-lunar-id";
+    process.env.CHANNEL_TRADE_BLOCK_TERRA = "trade-terra-id";
+    process.env.CHANNEL_TRANSACTIONS = "transactions-id";
+
+    expect(getTradeBlockChannelId("solar")).toBe("trade-solar-id");
+    expect(getTradeDivisionForChannel("trade-lunar-id")).toBe("lunar");
+    expect(getTradeDivisionForChannel("general")).toBeNull();
+    expect(getTransactionsChannelId()).toBe("transactions-id");
   });
 
   it("is case-insensitive on the division id", () => {

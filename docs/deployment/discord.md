@@ -91,9 +91,9 @@ After commands are registered:
 
 Role IDs are not secrets. They are stored in Supabase so admins can manage mappings from Discord without deployment access.
 
-## Planned roster workflow setup
+## Roster trade workflow setup
 
-Do not register the ADR-009 commands until the matching `sal-database` contract,
+Do not register `/trade` until the matching `sal-database` contract release,
 query helpers, handlers, and approval dispatchers are deployed.
 
 The roster workflow adds these channel variables:
@@ -107,15 +107,17 @@ The roster workflow adds these channel variables:
 approval cards, delivery ambiguity alerts, and failed organization-role
 reconciliation.
 
-Before enabling `/trade`, `/claim`, `/drop`, or `/draft-position-swap`:
+Before enabling `/trade`:
 
 1. Configure each division-specific Captain role with
    `/captain-role-config`.
-2. Configure every canonical organization role and mobile tag with
-   `/organization-role-config`.
-3. Configure Caster and Production roles with `/broadcast-role-config`.
+2. Configure every canonical organization role with
+   `/organization-role-config`; transaction messages continue to use the
+   existing canonical `orgs.tag` value.
+3. Configure `season_transaction_settings` for the active season/division with
+   the reviewed maximum roster size and `trades_open = true` only at launch.
 4. Place the bot role above every organization role it will reconcile.
-5. Verify that each trade-block command is rejected outside its configured
+5. Verify that `/trade` is rejected outside its configured
    division channel.
 6. Verify that an accepted captain action still waits for an `admin_users`
    decision through `pending_actions`.

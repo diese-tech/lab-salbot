@@ -5,13 +5,17 @@ import type {
   MatchResultPayload,
   PendingActionType,
   ReschedulePayload,
+  RosterDropPayload,
+  RosterTradePayload,
 } from "./types";
 
 export type PendingActionPayload =
   | MatchResultPayload
   | ReschedulePayload
   | AdminReviewPayload
-  | AliasChangePayload;
+  | AliasChangePayload
+  | RosterDropPayload
+  | RosterTradePayload;
 
 export function parsePendingActionPayload(
   type: PendingActionType,
@@ -20,7 +24,9 @@ export function parsePendingActionPayload(
   if (type === "match_result") return parseMatchResultPayload(value);
   if (type === "reschedule") return parseReschedulePayload(value);
   if (type === "admin_review") return parseAdminReviewPayload(value);
-  return parseAliasChangePayload(value);
+  if (type === "alias_change") return parseAliasChangePayload(value);
+  if (type === "roster_drop") return parseRosterDropPayload(value);
+  return parseRosterTradePayload(value);
 }
 
 export function parseMatchResultPayload(value: unknown): MatchResultPayload {
@@ -75,6 +81,42 @@ export function parseAliasChangePayload(value: unknown): AliasChangePayload {
     oldIgn: requireString(payload, "oldIgn"),
     newIgn: requireString(payload, "newIgn"),
     proofScreenshotUrl: requireString(payload, "proofScreenshotUrl"),
+  };
+}
+
+export function parseRosterTradePayload(value: unknown): RosterTradePayload {
+  const payload = requireObject(value, "roster_trade payload");
+  const revision = payload.revision;
+  const source = requireString(payload, "source");
+  if (!Number.isInteger(revision) || Number(revision) < 1) {
+    throw new Error(
+      "roster_trade payload revision must be a positive integer.",
+    );
+  }
+  if (
+    ![
+      "discord_workflow",
+      "web_workflow",
+      "manual_reconciliation",
+      "migration",
+    ].includes(source)
+  ) {
+    throw new Error("roster_trade payload source is invalid.");
+  }
+  return {
+    transactionId: requireString(payload, "transactionId"),
+    revision: Number(revision),
+    source: source as RosterTradePayload["source"],
+  };
+}
+
+export function parseRosterDropPayload(value: unknown): RosterDropPayload {
+  const payload = requireObject(value, "roster_drop payload");
+  const transaction = parseRosterTradePayload(payload);
+  return {
+    ...transaction,
+    orgId: requireString(payload, "orgId"),
+    playerId: requireString(payload, "playerId"),
   };
 }
 

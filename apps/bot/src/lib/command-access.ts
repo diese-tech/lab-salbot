@@ -3,6 +3,7 @@ import type { APIInteractionGuildMember, GuildMember } from 'discord.js';
 export type OperationalCapability =
   | 'report-result'
   | 'log-scouter'
+  | 'trade'
   | 'enter-match-stats';
 export type CommandAccessMember =
   | Pick<APIInteractionGuildMember, 'roles'>
@@ -62,4 +63,22 @@ export function hasCommandAccess(
     return authorizedRoleIds.some((roleId) => roles.includes(roleId));
   }
   return authorizedRoleIds.some((roleId) => roles.cache.has(roleId));
+}
+
+export function hasAdminCommandAccess(
+  member: CommandAccessMember,
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  if (!member) return false;
+
+  let adminRoleIds: string[];
+  try {
+    adminRoleIds = configuredRoleIds('SAL_ADMIN_ROLE_IDS', env);
+  } catch {
+    return false;
+  }
+
+  const roles = member.roles;
+  if (Array.isArray(roles)) return adminRoleIds.some((roleId) => roles.includes(roleId));
+  return adminRoleIds.some((roleId) => roles.cache.has(roleId));
 }

@@ -61,20 +61,17 @@ See
 [`ADR-009`](../adr/ADR-009-discord-role-backed-operational-command-authorization.md)
 for the supersession and capability contract.
 
-Planned roster commands use the stricter season-scoped authorization defined in
-ADR-009:
+`/trade` and `/drop` use the season-scoped authorization defined in ADR-009:
 
 ```
-Discord user ID
-  → active-season player identity
-  → division-specific Captain role
-  → organization role
-  → organization team in the command channel's division
+Discord administrator role → any active organization
+OR organization owner/advisor role → that organization in any fielded division
+OR division Captain role + canonical season_rosters captain → that exact team
 ```
 
-Both roles are required. This survives captain changes without issuing
-captain-specific links and allows one organization to field separate teams in
-Solar, Lunar, and Terra.
+Player team roles are not authorization roles. They are scoped by season,
+division, and organization and only project canonical roster membership after
+the database commits.
 
 ---
 
@@ -167,19 +164,19 @@ or database action.
 
 ---
 
-## Planned roster transaction lifecycle
+## Roster transaction lifecycle
 
 1. Captain command input and review remain ephemeral.
 2. Explicit submission creates durable transaction state and a linked
    `pending_actions` record.
 3. Trade proposals post a public division-channel card for counterpart consent.
-4. Accepted trades, claims, drops, and draft-position swaps enter the existing
-   private admin-review pipeline.
+4. Accepted trades and submitted drops enter the existing private admin-review
+   pipeline. Planned claims and draft-position swaps will reuse it.
 5. Approval executes one authoritative database transaction, including the
    immutable audit entry and durable outbox event.
 6. The bot publishes the completed operation to `CHANNEL_TRANSACTIONS`.
-7. Claims, drops, trades, and reversals reconcile Discord organization roles
-   from the resulting canonical roster.
+7. Trades and drops reconcile Discord division-team roles from the resulting
+   canonical roster. Planned claims and reversals will reuse the same worker.
 8. Failed role reconciliation alerts `CHANNEL_ADMIN_REVIEW`; it never rolls
    back the database operation or exposes private reasons publicly.
 
