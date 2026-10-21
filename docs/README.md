@@ -60,6 +60,7 @@ New ADRs: copy [`adrs/template.md`](adrs/template.md).
 
 - [`runbooks/incident-handling.md`](runbooks/incident-handling.md) - live incident response
 - [`runbooks/admin-operations.md`](runbooks/admin-operations.md) - common admin tasks
+- [`runbooks/division-season-reset.md`](runbooks/division-season-reset.md) - preview-only scaffold for rebuilding active division channels next season; execution is not implemented
 
 ## Deployment
 

@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "guildId": "REPLACE_WITH_GUILD_ID",
+  "nextSeason": "next-season",
+  "protectedCategoryIds": [],
+  "divisions": [
+    {
+      "key": "solar",
+      "categoryId": "REPLACE_WITH_SOLAR_CATEGORY_ID",
+      "expectedCategoryName": "Solar Division",
+      "expectedChannelIds": []
+    },
+    {
+      "key": "lunar",
+      "categoryId": "REPLACE_WITH_LUNAR_CATEGORY_ID",
+      "expectedCategoryName": "Lunar Division",
+      "expectedChannelIds": []
+    },
+    {
+      "key": "terra",
+      "categoryId": "REPLACE_WITH_TERRA_CATEGORY_ID",
+      "expectedCategoryName": "Terra Division",
+      "expectedChannelIds": []
+    }
+  ],
+  "channelTemplate": [
+    {
+      "key": "announcements",
+      "name": "{division}-announcements",
+      "type": "text",
+      "permissionProfile": "announcements-review-required"
+    },
+    {
+      "key": "general",
+      "name": "general",
+      "type": "text",
+      "permissionProfile": "division-baseline-review-required"
+    },
+    {
+      "key": "tier-list",
+      "name": "tier-list",
+      "type": "text",
+      "permissionProfile": "division-baseline-review-required"
+    },
+    {
+      "key": "reschedules",
+      "name": "reschedules",
+      "type": "text",
+      "permissionProfile": "reschedules-review-required"
+    },
+    {
+      "key": "captain-chat",
+      "name": "captain-chat",
+      "type": "text",
+      "permissionProfile": "captains-and-staff-review-required"
+    },
+    {
+      "key": "match-report",
+      "name": "match-report",
+      "type": "text",
+      "permissionProfile": "match-report-review-required"
+    },
+    {
+      "key": "sub-approval",
+      "name": "sub-approval",
+      "type": "text",
+      "permissionProfile": "sub-approval-review-required"
+    },
+    {
+      "key": "join-to-yap",
+      "name": "Join to Yap",
+      "type": "voice",
+      "permissionProfile": "voice-automation-review-required"
+    }
+  ]
+}

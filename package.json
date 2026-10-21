@@ -15,7 +15,10 @@
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
     "db:types": "pnpm --filter @salbot/db generate",
     "check:db-contract": "node scripts/db-contract.mjs check packages/db/src/types/database.types.ts",
-    "sync:db-contract": "node scripts/db-contract.mjs sync packages/db/src/types/database.types.ts"
+    "sync:db-contract": "node scripts/db-contract.mjs sync packages/db/src/types/database.types.ts",
+    "season:reset:plan": "node scripts/division-season-reset.mjs plan",
+    "season:reset:capture": "node scripts/division-season-reset.mjs capture",
+    "test:season-reset": "node --test scripts/division-season-reset.test.mjs"
   },
   "engines": {
     "node": ">=24 <25"
