@@ -13,3 +13,6 @@ supabase/.temp
 
 # Agent-harness worktree scratch state, not repo content
 .claude/
+
+# Private Discord inventories and season-reset plans (never publish ACL exports)
+.local/season-reset/
